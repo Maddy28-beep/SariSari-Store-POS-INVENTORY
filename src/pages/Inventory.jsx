@@ -5,6 +5,12 @@ import { useAuth } from '../context/AuthContext';
 import { getAllProducts, stockStatus } from '../services/products';
 import { getCategories } from '../services/catalog';
 
+const STATUS_BADGE = {
+  out: { icon: 'bi-x-octagon-fill', text: 'text-bg-danger', label: 'Out' },
+  low: { icon: 'bi-exclamation-triangle-fill', text: 'text-bg-warning', label: 'Low' },
+  ok: { icon: 'bi-check-circle-fill', text: 'text-bg-success', label: 'In Stock' },
+};
+
 export default function Inventory() {
   const { isOwnerOrAdmin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,15 +50,22 @@ export default function Inventory() {
   return (
     <Layout header={
       <div className="d-flex justify-content-between align-items-center">
-        <h2 className="h4 mb-0">📦 Inventory</h2>
-        {isOwnerOrAdmin && <Link to="/inventory/new" className="btn btn-primary">+ Add Product</Link>}
+        <h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-box-seam-fill text-primary"></i> Inventory</h2>
+        {isOwnerOrAdmin && (
+          <Link to="/inventory/new" className="btn btn-primary d-flex align-items-center gap-2">
+            <i className="bi bi-plus-lg"></i> Add Product
+          </Link>
+        )}
       </div>
     }>
       <div className="card mb-3">
         <div className="card-body">
           <div className="row g-2">
             <div className="col-md-6">
-              <input type="text" className="form-control" placeholder="🔍 Search / Scan Barcode" value={search} onChange={(e) => setSearch(e.target.value)} />
+              <div className="input-group">
+                <span className="input-group-text bg-light border-end-0"><i className="bi bi-search text-secondary"></i></span>
+                <input type="text" className="form-control border-start-0" placeholder="Search / scan barcode" value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
             </div>
             <div className="col-md-3">
               <select className="form-select" value={stockFilter} onChange={(e) => handleFilterChange(e.target.value)}>
@@ -83,24 +96,34 @@ export default function Inventory() {
               {loading ? (
                 <tr><td colSpan={7} className="text-center py-5"><div className="spinner-border text-primary" /></td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="text-center text-secondary py-5">No products found.</td></tr>
+                <tr>
+                  <td colSpan={7} className="text-center text-secondary py-5">
+                    <i className="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+                    No products found.
+                  </td>
+                </tr>
               ) : filtered.map((product) => {
                 const status = stockStatus(product);
+                const badge = STATUS_BADGE[status];
                 return (
                   <tr key={product.id}>
-                    <td>{product.name}</td>
-                    <td className="font-monospace small">{product.barcode || '—'}</td>
+                    <td className="fw-semibold">{product.name}</td>
+                    <td className="font-monospace small text-secondary">{product.barcode || '—'}</td>
                     <td>{categories[product.categoryId] || '—'}</td>
                     <td className="text-end">₱{product.sellingPrice.toFixed(2)}</td>
                     <td className="text-end">{product.currentStock} {product.unit}</td>
                     <td>
-                      {status === 'out' && <span className="badge text-bg-danger">OUT</span>}
-                      {status === 'low' && <span className="badge text-bg-warning">LOW</span>}
-                      {status === 'ok' && <span className="badge text-bg-success">OK</span>}
-                      {product.status === 'inactive' && <span className="badge text-bg-secondary ms-1">INACTIVE</span>}
+                      <span className={`badge ${badge.text} d-inline-flex align-items-center gap-1`}>
+                        <i className={`bi ${badge.icon}`}></i> {badge.label}
+                      </span>
+                      {product.status === 'inactive' && <span className="badge text-bg-secondary ms-1">Inactive</span>}
                     </td>
                     {isOwnerOrAdmin && (
-                      <td><Link to={`/inventory/${product.id}/edit`} className="btn btn-sm btn-outline-secondary">Edit</Link></td>
+                      <td>
+                        <Link to={`/inventory/${product.id}/edit`} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                          <i className="bi bi-pencil"></i> Edit
+                        </Link>
+                      </td>
                     )}
                   </tr>
                 );

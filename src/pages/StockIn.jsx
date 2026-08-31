@@ -32,7 +32,7 @@ export default function StockIn() {
     const product = await lookupByBarcode(code);
 
     if (!product) {
-      setScanError(`⚠️ Barcode "${code}" is not registered.`);
+      setScanError(`Barcode "${code}" is not registered.`);
       if (confirm(`Barcode ${code} not found. Add it as a new product?`)) {
         navigate(`/inventory/new?barcode=${encodeURIComponent(code)}`);
         return;
@@ -82,14 +82,20 @@ export default function StockIn() {
   }
 
   return (
-    <Layout header={<h2 className="h4 mb-0">📥 Receive Stock</h2>}>
-      {status && <div className="alert alert-success">{status}</div>}
+    <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-box-arrow-in-down text-primary"></i> Receive Stock</h2>}>
+      {status && (
+        <div className="alert alert-success d-flex align-items-center gap-2">
+          <i className="bi bi-check-circle-fill"></i> {status}
+        </div>
+      )}
 
       <div className="card mb-3">
         <div className="card-body">
           <div className="row g-2 align-items-end">
             <div className="col-md-8">
-              <label className="form-label">Scan Barcode</label>
+              <label className="form-label small fw-semibold d-flex align-items-center gap-1">
+                <i className="bi bi-upc-scan"></i> Scan Barcode
+              </label>
               <input
                 type="text" className="form-control scan-input" placeholder="Scan or type barcode, then Enter"
                 ref={barcodeRef} value={barcodeInput}
@@ -98,14 +104,18 @@ export default function StockIn() {
               />
             </div>
             <div className="col-md-4">
-              <label className="form-label">Supplier (optional)</label>
+              <label className="form-label small fw-semibold">Supplier (optional)</label>
               <select className="form-select" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
                 <option value="">— None —</option>
                 {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
           </div>
-          {scanError && <div className="small text-danger mt-2">{scanError}</div>}
+          {scanError && (
+            <div className="small text-danger mt-2 d-flex align-items-center gap-1">
+              <i className="bi bi-exclamation-circle"></i> {scanError}
+            </div>
+          )}
         </div>
       </div>
 
@@ -122,17 +132,22 @@ export default function StockIn() {
             </thead>
             <tbody>
               {items.length === 0 ? (
-                <tr><td colSpan={4} className="text-center text-secondary py-5">Scan products as they arrive from the supplier.</td></tr>
+                <tr>
+                  <td colSpan={4} className="text-center text-secondary py-5">
+                    <i className="bi bi-truck fs-1 d-block mb-2 opacity-25"></i>
+                    Scan products as they arrive from the supplier.
+                  </td>
+                </tr>
               ) : items.map((item, index) => (
                 <tr key={item.productId}>
-                  <td>{item.name}</td>
+                  <td className="fw-semibold">{item.name}</td>
                   <td>
                     <input type="number" className="form-control form-control-sm" min="0.001" step={item.allowDecimal ? 0.01 : 1} value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} />
                   </td>
                   <td>
                     <input type="number" className="form-control form-control-sm" min="0" step="0.01" value={item.costPrice} onChange={(e) => updateItem(index, 'costPrice', e.target.value)} />
                   </td>
-                  <td><button className="btn btn-sm btn-link text-danger" onClick={() => removeItem(index)}>✕</button></td>
+                  <td><button className="btn btn-sm btn-link text-danger" onClick={() => removeItem(index)}><i className="bi bi-trash3"></i></button></td>
                 </tr>
               ))}
             </tbody>
@@ -141,8 +156,9 @@ export default function StockIn() {
       </div>
 
       <div className="d-flex justify-content-end">
-        <button className="btn btn-success btn-lg" disabled={items.length === 0 || saving} onClick={handleSave}>
-          {saving ? 'Saving…' : 'SAVE RECEIVING'}
+        <button className="btn btn-success btn-lg d-flex align-items-center gap-2" disabled={items.length === 0 || saving} onClick={handleSave}>
+          {saving ? <span className="spinner-border spinner-border-sm" role="status"></span> : <i className="bi bi-cloud-check"></i>}
+          {saving ? 'Saving…' : 'Save Receiving'}
         </button>
       </div>
     </Layout>

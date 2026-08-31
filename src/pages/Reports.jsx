@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
+import StatCard from '../components/StatCard';
 import { getSalesInRange, getSaleItemsInRange, summarizeReports, getStockReport } from '../services/reports';
 import { getAllUsers } from '../services/users';
 
@@ -32,7 +33,7 @@ export default function Reports() {
   }, [period]);
 
   return (
-    <Layout header={<h2 className="h4 mb-0">📈 Reports</h2>}>
+    <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-graph-up-arrow text-primary"></i> Reports</h2>}>
       <ul className="nav nav-tabs mb-3">
         {Object.entries(PERIODS).map(([key, label]) => (
           <li className="nav-item" key={key}>
@@ -52,35 +53,35 @@ export default function Reports() {
         <>
           <div className="row g-3 mb-4">
             <div className="col-md-6">
-              <div className="card stat-card h-100">
-                <div className="card-body">
-                  <div className="text-secondary small text-uppercase">Total Sales ({PERIODS[period]})</div>
-                  <div className="fs-3 fw-bold">₱{summary.totalSales.toFixed(2)}</div>
-                  <div className="text-secondary small">{summary.transactionCount} transactions</div>
-                </div>
-              </div>
+              <StatCard
+                icon="bi-cash-stack"
+                label={`Total Sales (${PERIODS[period]})`}
+                value={`₱${summary.totalSales.toFixed(2)}`}
+                sublabel={`${summary.transactionCount} transactions`}
+              />
             </div>
             <div className="col-md-6">
-              <div className="card stat-card h-100">
-                <div className="card-body">
-                  <div className="text-secondary small text-uppercase">Inventory Valuation</div>
-                  <div className="fs-5">Cost: ₱{stock.costValue.toFixed(2)}</div>
-                  <div className="fs-5">Retail: ₱{stock.retailValue.toFixed(2)}</div>
-                </div>
-              </div>
+              <StatCard
+                icon="bi-archive"
+                label="Inventory Valuation"
+                value={`₱${stock.retailValue.toFixed(2)}`}
+                sublabel={`Cost: ₱${stock.costValue.toFixed(2)}`}
+              />
             </div>
           </div>
 
           <div className="row g-3 mb-4">
             <div className="col-md-6">
               <div className="card h-100">
-                <div className="card-header">🏆 Best-Selling Products</div>
+                <div className="card-header d-flex align-items-center gap-2">
+                  <i className="bi bi-trophy-fill text-warning"></i> Best-Selling Products
+                </div>
                 <ul className="list-group list-group-flush">
                   {summary.bestSellers.length === 0 ? (
                     <li className="list-group-item text-secondary text-center py-4">No sales in this period.</li>
                   ) : summary.bestSellers.map((item) => (
                     <li key={item.productName} className="list-group-item d-flex justify-content-between">
-                      <span>{item.productName}</span>
+                      <span className="fw-semibold">{item.productName}</span>
                       <span className="text-secondary">{item.qty} sold — ₱{item.revenue.toFixed(2)}</span>
                     </li>
                   ))}
@@ -89,13 +90,15 @@ export default function Reports() {
             </div>
             <div className="col-md-6">
               <div className="card h-100">
-                <div className="card-header">💳 Payment Method Summary</div>
+                <div className="card-header d-flex align-items-center gap-2">
+                  <i className="bi bi-credit-card-fill text-secondary"></i> Payment Method Summary
+                </div>
                 <ul className="list-group list-group-flush">
                   {summary.paymentSummary.length === 0 ? (
                     <li className="list-group-item text-secondary text-center py-4">No sales in this period.</li>
                   ) : summary.paymentSummary.map((item) => (
                     <li key={item.method} className="list-group-item d-flex justify-content-between">
-                      <span className="text-uppercase">{item.method}</span>
+                      <span className="text-uppercase fw-semibold">{item.method}</span>
                       <span className="text-secondary">{item.count} txns — ₱{item.total.toFixed(2)}</span>
                     </li>
                   ))}
@@ -105,13 +108,15 @@ export default function Reports() {
           </div>
 
           <div className="card mb-4">
-            <div className="card-header">👤 Cashier Sales</div>
+            <div className="card-header d-flex align-items-center gap-2">
+              <i className="bi bi-person-fill text-secondary"></i> Cashier Sales
+            </div>
             <ul className="list-group list-group-flush">
               {summary.cashierSummary.length === 0 ? (
                 <li className="list-group-item text-secondary text-center py-4">No sales in this period.</li>
               ) : summary.cashierSummary.map((item) => (
                 <li key={item.cashierId} className="list-group-item d-flex justify-content-between">
-                  <span>{usersById[item.cashierId] || '—'}</span>
+                  <span className="fw-semibold">{usersById[item.cashierId] || '—'}</span>
                   <span className="text-secondary">{item.count} txns — ₱{item.total.toFixed(2)}</span>
                 </li>
               ))}
@@ -121,13 +126,15 @@ export default function Reports() {
           <div className="row g-3">
             <div className="col-md-6">
               <div className="card h-100">
-                <div className="card-header text-warning-emphasis">⚠ Low Stock Products</div>
+                <div className="card-header d-flex align-items-center gap-2 text-warning-emphasis">
+                  <i className="bi bi-exclamation-triangle-fill"></i> Low Stock Products
+                </div>
                 <ul className="list-group list-group-flush">
                   {stock.lowStock.length === 0 ? (
                     <li className="list-group-item text-secondary text-center py-4">Nothing low on stock.</li>
                   ) : stock.lowStock.map((p) => (
                     <li key={p.id} className="list-group-item d-flex justify-content-between">
-                      <span>{p.name}</span>
+                      <span className="fw-semibold">{p.name}</span>
                       <span className="badge text-bg-warning">{p.currentStock} {p.unit}</span>
                     </li>
                   ))}
@@ -136,14 +143,16 @@ export default function Reports() {
             </div>
             <div className="col-md-6">
               <div className="card h-100">
-                <div className="card-header text-danger-emphasis">🔴 Out of Stock Products</div>
+                <div className="card-header d-flex align-items-center gap-2 text-danger-emphasis">
+                  <i className="bi bi-x-octagon-fill"></i> Out of Stock Products
+                </div>
                 <ul className="list-group list-group-flush">
                   {stock.outOfStock.length === 0 ? (
                     <li className="list-group-item text-secondary text-center py-4">Nothing out of stock.</li>
                   ) : stock.outOfStock.map((p) => (
                     <li key={p.id} className="list-group-item d-flex justify-content-between">
-                      <span>{p.name}</span>
-                      <span className="badge text-bg-danger">OUT</span>
+                      <span className="fw-semibold">{p.name}</span>
+                      <span className="badge text-bg-danger">Out</span>
                     </li>
                   ))}
                 </ul>

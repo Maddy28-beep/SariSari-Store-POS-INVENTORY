@@ -41,22 +41,26 @@ export default function UserEdit() {
   }
 
   return (
-    <Layout header={<h2 className="h4 mb-0">Edit User</h2>}>
-      <div className="card mx-auto" style={{ maxWidth: 480 }}>
+    <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-person-gear text-primary"></i> Edit User</h2>}>
+      <div className="card mx-auto shadow-sm" style={{ maxWidth: 480 }}>
         <div className="card-body">
-          {status && <div className="alert alert-success py-2">{status}</div>}
+          {status && (
+            <div className="alert alert-success d-flex align-items-center gap-2 py-2">
+              <i className="bi bi-check-circle-fill"></i> {status}
+            </div>
+          )}
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
-              <label className="form-label">Name</label>
+              <label className="form-label small fw-semibold">Name</label>
               <input type="text" className="form-control" value={form.name} onChange={(e) => update('name', e.target.value)} required autoFocus />
             </div>
             <div className="mb-3">
-              <label className="form-label">Email</label>
+              <label className="form-label small fw-semibold">Email</label>
               <input type="email" className="form-control" value={form.email} disabled />
               <div className="form-text">Email can't be changed here.</div>
             </div>
             <div className="mb-3">
-              <label className="form-label">Role</label>
+              <label className="form-label small fw-semibold">Role</label>
               <select className="form-select" value={form.role} onChange={(e) => update('role', e.target.value)} required>
                 <option value="cashier">Cashier</option>
                 <option value="admin">Admin</option>
@@ -69,12 +73,13 @@ export default function UserEdit() {
             </div>
             <div className="d-flex justify-content-between mb-3">
               <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/users')}>Cancel</button>
-              <button type="submit" className="btn btn-primary" disabled={submitting}>
+              <button type="submit" className="btn btn-primary d-flex align-items-center gap-2" disabled={submitting}>
+                {submitting ? <span className="spinner-border spinner-border-sm" role="status"></span> : <i className="bi bi-check-lg"></i>}
                 {submitting ? 'Saving…' : 'Save Changes'}
               </button>
             </div>
-            <button type="button" className="btn btn-outline-warning btn-sm w-100" onClick={handleResetPassword}>
-              Send Password Reset Email
+            <button type="button" className="btn btn-outline-warning btn-sm w-100 d-flex align-items-center justify-content-center gap-2" onClick={handleResetPassword}>
+              <i className="bi bi-envelope-arrow-up"></i> Send Password Reset Email
             </button>
           </form>
         </div>

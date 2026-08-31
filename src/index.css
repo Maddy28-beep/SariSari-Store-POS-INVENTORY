@@ -1,25 +1,217 @@
+:root {
+  --bs-primary: #0e7c66;
+  --bs-primary-rgb: 14, 124, 102;
+  --bs-primary-text-emphasis: #0a5c4c;
+  --bs-primary-bg-subtle: #e2f3ee;
+  --bs-primary-border-subtle: #b9e0d5;
+  --bs-link-color: #0e7c66;
+  --bs-link-color-rgb: 14, 124, 102;
+  --bs-link-hover-color: #0a5c4c;
+  --bs-link-hover-color-rgb: 10, 92, 76;
+
+  --bs-body-font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --bs-body-color: #1c2126;
+  --bs-body-bg: #f4f6f5;
+
+  --sari-ink: #14181c;
+  --sari-ink-soft: #232a30;
+  --sari-border: rgba(255, 255, 255, 0.08);
+  --sari-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   min-height: 100vh;
-  background-color: #f8f9fa;
+  letter-spacing: -0.01em;
 }
 
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.btn {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/*
+ * Bootstrap's precompiled CSS bakes each component's colors from Sass at build
+ * time, so overriding --bs-primary on :root alone doesn't reach .btn-primary,
+ * form focus rings, etc. Re-point the components we actually use at the brand color.
+ */
+.btn-primary {
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: #0a5c4c;
+  --bs-btn-hover-border-color: #0a5c4c;
+  --bs-btn-active-bg: #094e40;
+  --bs-btn-active-border-color: #094e40;
+  --bs-btn-disabled-bg: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
+  --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
+  --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #7fbdaf;
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.form-check-input:checked {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+}
+
+.form-check-input:focus {
+  border-color: #7fbdaf;
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.spinner-border.text-primary {
+  color: var(--bs-primary) !important;
+}
+
+.card {
+  border: 1px solid rgba(20, 24, 28, 0.08);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(20, 24, 28, 0.04);
+}
+
+.card-header {
+  font-weight: 700;
+  background-color: transparent;
+  border-bottom: 1px solid rgba(20, 24, 28, 0.08);
+}
+
+.table {
+  --bs-table-hover-bg: rgba(14, 124, 102, 0.05);
+}
+
+.table thead th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7680;
+  border-bottom-width: 1px;
+}
+
+/* Stat / KPI cards */
 .stat-card {
-  border-left: 4px solid #146c43;
+  position: relative;
+  overflow: hidden;
 }
 
-.stat-card.warning {
-  border-left-color: #ffc107;
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--bs-primary);
 }
 
-.stat-card.danger {
-  border-left-color: #dc3545;
+.stat-card.warning::before { background: #d18700; }
+.stat-card.danger::before { background: #c8342a; }
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary-text-emphasis);
+  font-size: 1.1rem;
 }
 
+.stat-card.warning .stat-icon { background: #fdf1da; color: #8a5a00; }
+.stat-card.danger .stat-icon { background: #fbe4e2; color: #8f251d; }
+
+/* Sidebar */
+.app-sidebar {
+  background: var(--sari-ink);
+}
+
+.app-sidebar .brand {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.app-sidebar .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.5rem;
+  color: rgba(255, 255, 255, 0.68);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.app-sidebar .nav-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.app-sidebar .nav-link.active {
+  background: var(--bs-primary);
+  color: #fff;
+}
+
+.app-sidebar .nav-link i {
+  font-size: 1.05rem;
+  width: 1.25rem;
+  text-align: center;
+}
+
+.app-sidebar hr {
+  border-color: var(--sari-border);
+  opacity: 1;
+}
+
+/* Barcode / scan inputs */
 .scan-input {
-  font-size: 1.25rem;
-  font-family: 'Courier New', monospace;
+  font-family: var(--sari-mono);
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
 }
 
 .pos-cart-row:hover {
-  background-color: #f1f3f5;
+  background-color: rgba(14, 124, 102, 0.05);
+}
+
+.badge {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.4em 0.65em;
+}
+
+.nav-tabs .nav-link {
+  font-weight: 600;
+  color: #6b7680;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+.nav-tabs .nav-link.active {
+  color: var(--bs-primary);
+  background: transparent;
+  border-color: var(--bs-primary);
 }

@@ -80,12 +80,16 @@ export default function ProductEdit() {
   }
 
   return (
-    <Layout header={<h2 className="h4 mb-0">Edit Product</h2>}>
+    <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-pencil-square text-primary"></i> Edit Product</h2>}>
       <div className="row g-3 justify-content-center">
         <div className="col-lg-6">
           <div className="card">
             <div className="card-body">
-              {error && <div className="alert alert-danger py-2">{error}</div>}
+              {error && (
+                <div className="alert alert-danger d-flex align-items-center gap-2 py-2">
+                  <i className="bi bi-exclamation-circle-fill"></i> {error}
+                </div>
+              )}
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
                   <label className="form-label">Barcode</label>
@@ -148,8 +152,9 @@ export default function ProductEdit() {
 
                 <div className="d-flex justify-content-between">
                   <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/inventory')}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" disabled={submitting}>
-                    {submitting ? 'Saving…' : 'SAVE CHANGES'}
+                  <button type="submit" className="btn btn-primary d-flex align-items-center gap-2" disabled={submitting}>
+                    {submitting ? <span className="spinner-border spinner-border-sm" role="status"></span> : <i className="bi bi-check-lg"></i>}
+                    {submitting ? 'Saving…' : 'Save Changes'}
                   </button>
                 </div>
               </form>
@@ -159,20 +164,30 @@ export default function ProductEdit() {
 
         <div className="col-lg-4">
           <div className="card">
-            <div className="card-header">Adjust Stock</div>
+            <div className="card-header d-flex align-items-center gap-2">
+              <i className="bi bi-sliders text-secondary"></i> Adjust Stock
+            </div>
             <div className="card-body">
-              <p className="text-secondary small">Current stock: <strong>{form.currentStock} {form.unit}</strong></p>
-              {adjustStatus && <div className="alert alert-success py-2 small">{adjustStatus}</div>}
+              <p className="text-secondary small">
+                Current stock: <strong className="text-body">{form.currentStock} {form.unit}</strong>
+              </p>
+              {adjustStatus && (
+                <div className="alert alert-success d-flex align-items-center gap-2 py-2 small">
+                  <i className="bi bi-check-circle-fill"></i> {adjustStatus}
+                </div>
+              )}
               <form onSubmit={handleAdjust}>
                 <div className="mb-2">
-                  <label className="form-label">Adjustment (+ or -)</label>
+                  <label className="form-label small fw-semibold">Adjustment (+ or -)</label>
                   <input type="number" className="form-control" step="0.001" value={adjustQty} onChange={(e) => setAdjustQty(e.target.value)} required />
                 </div>
                 <div className="mb-3">
-                  <label className="form-label">Reason</label>
+                  <label className="form-label small fw-semibold">Reason</label>
                   <input type="text" className="form-control" placeholder="e.g. damaged, recount, spoilage" value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} required />
                 </div>
-                <button type="submit" className="btn btn-outline-secondary w-100">Apply Adjustment</button>
+                <button type="submit" className="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-2">
+                  <i className="bi bi-arrow-repeat"></i> Apply Adjustment
+                </button>
               </form>
             </div>
           </div>

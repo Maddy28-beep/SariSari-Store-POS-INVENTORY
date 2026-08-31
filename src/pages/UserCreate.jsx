@@ -28,25 +28,29 @@ export default function UserCreate() {
   }
 
   return (
-    <Layout header={<h2 className="h4 mb-0">Add User</h2>}>
-      <div className="card mx-auto" style={{ maxWidth: 480 }}>
+    <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-person-plus text-primary"></i> Add User</h2>}>
+      <div className="card mx-auto shadow-sm" style={{ maxWidth: 480 }}>
         <div className="card-body">
-          {error && <div className="alert alert-danger py-2">{error}</div>}
+          {error && (
+            <div className="alert alert-danger d-flex align-items-center gap-2 py-2">
+              <i className="bi bi-exclamation-circle-fill"></i> {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
-              <label className="form-label">Name</label>
+              <label className="form-label small fw-semibold">Name</label>
               <input type="text" className="form-control" value={form.name} onChange={(e) => update('name', e.target.value)} required autoFocus />
             </div>
             <div className="mb-3">
-              <label className="form-label">Email</label>
+              <label className="form-label small fw-semibold">Email</label>
               <input type="email" className="form-control" value={form.email} onChange={(e) => update('email', e.target.value)} required />
             </div>
             <div className="mb-3">
-              <label className="form-label">Password</label>
+              <label className="form-label small fw-semibold">Password</label>
               <input type="password" className="form-control" value={form.password} onChange={(e) => update('password', e.target.value)} minLength={6} required />
             </div>
             <div className="mb-3">
-              <label className="form-label">Role</label>
+              <label className="form-label small fw-semibold">Role</label>
               <select className="form-select" value={form.role} onChange={(e) => update('role', e.target.value)} required>
                 <option value="cashier">Cashier</option>
                 <option value="admin">Admin</option>
@@ -55,7 +59,8 @@ export default function UserCreate() {
             </div>
             <div className="d-flex justify-content-between">
               <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/users')}>Cancel</button>
-              <button type="submit" className="btn btn-primary" disabled={submitting}>
+              <button type="submit" className="btn btn-primary d-flex align-items-center gap-2" disabled={submitting}>
+                {submitting ? <span className="spinner-border spinner-border-sm" role="status"></span> : <i className="bi bi-check-lg"></i>}
                 {submitting ? 'Saving…' : 'Save User'}
               </button>
             </div>

@@ -89,41 +89,50 @@ export default function ProductCreate() {
   }
 
   return (
-    <Layout header={<h2 className="h4 mb-0">Add New Product</h2>}>
-      <div className="card mx-auto" style={{ maxWidth: 560 }}>
+    <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-box-seam text-primary"></i> Add New Product</h2>}>
+      <div className="card mx-auto shadow-sm" style={{ maxWidth: 560 }}>
         <div className="card-body">
-          {error && <div className="alert alert-danger py-2">{error}</div>}
+          {error && (
+            <div className="alert alert-danger d-flex align-items-center gap-2 py-2">
+              <i className="bi bi-exclamation-circle-fill"></i> {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
-              <label className="form-label">Scan Barcode (leave blank if none)</label>
+              <label className="form-label small fw-semibold d-flex align-items-center gap-1">
+                <i className="bi bi-upc-scan"></i> Scan Barcode <span className="text-secondary fw-normal">(leave blank if none)</span>
+              </label>
               <input
                 type="text" className="form-control scan-input" value={form.barcode} autoFocus
                 onChange={(e) => update('barcode', e.target.value)}
                 onBlur={(e) => checkDuplicate(e.target.value)}
               />
               {duplicate && (
-                <div className="alert alert-warning mt-2 py-2 small">
-                  ⚠️ This barcode is already registered to <strong>{duplicate.name}</strong>.{' '}
-                  <a href="/stock-in" className="alert-link">Go to Stock In</a> instead.
+                <div className="alert alert-warning mt-2 py-2 small d-flex align-items-start gap-2">
+                  <i className="bi bi-exclamation-triangle-fill mt-1"></i>
+                  <span>
+                    This barcode is already registered to <strong>{duplicate.name}</strong>.{' '}
+                    <a href="/stock-in" className="alert-link">Go to Stock In</a> instead.
+                  </span>
                 </div>
               )}
             </div>
 
             <div className="mb-3">
-              <label className="form-label">Product Name</label>
+              <label className="form-label small fw-semibold">Product Name</label>
               <input type="text" className="form-control" value={form.name} onChange={(e) => update('name', e.target.value)} required />
             </div>
 
             <div className="row g-3 mb-3">
               <div className="col-md-6">
-                <label className="form-label">Category</label>
+                <label className="form-label small fw-semibold">Category</label>
                 <select className="form-select" value={form.categoryId} onChange={(e) => update('categoryId', e.target.value)}>
                   <option value="">— None —</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="col-md-6">
-                <label className="form-label">Unit</label>
+                <label className="form-label small fw-semibold">Unit</label>
                 <select className="form-select" value={form.unitId} onChange={(e) => update('unitId', e.target.value)} required>
                   {units.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.abbreviation})</option>)}
                 </select>
@@ -131,7 +140,7 @@ export default function ProductCreate() {
             </div>
 
             <div className="mb-3">
-              <label className="form-label">Supplier (optional)</label>
+              <label className="form-label small fw-semibold">Supplier (optional)</label>
               <select className="form-select" value={form.supplierId} onChange={(e) => update('supplierId', e.target.value)}>
                 <option value="">— None —</option>
                 {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -140,30 +149,31 @@ export default function ProductCreate() {
 
             <div className="row g-3 mb-3">
               <div className="col-md-6">
-                <label className="form-label">Cost Price (₱)</label>
+                <label className="form-label small fw-semibold">Cost Price (₱)</label>
                 <input type="number" className="form-control" step="0.01" min="0" value={form.costPrice} onChange={(e) => update('costPrice', e.target.value)} required />
               </div>
               <div className="col-md-6">
-                <label className="form-label">Selling Price (₱)</label>
+                <label className="form-label small fw-semibold">Selling Price (₱)</label>
                 <input type="number" className="form-control" step="0.01" min="0" value={form.sellingPrice} onChange={(e) => update('sellingPrice', e.target.value)} required />
               </div>
             </div>
 
             <div className="row g-3 mb-3">
               <div className="col-md-6">
-                <label className="form-label">Reorder Level</label>
+                <label className="form-label small fw-semibold">Reorder Level</label>
                 <input type="number" className="form-control" step="0.001" min="0" value={form.reorderLevel} onChange={(e) => update('reorderLevel', e.target.value)} required />
               </div>
               <div className="col-md-6">
-                <label className="form-label">Initial Stock</label>
+                <label className="form-label small fw-semibold">Initial Stock</label>
                 <input type="number" className="form-control" step="0.001" min="0" value={form.initialStock} onChange={(e) => update('initialStock', e.target.value)} />
               </div>
             </div>
 
             <div className="d-flex justify-content-between">
               <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/inventory')}>Cancel</button>
-              <button type="submit" className="btn btn-primary" disabled={submitting}>
-                {submitting ? 'Saving…' : 'SAVE PRODUCT'}
+              <button type="submit" className="btn btn-primary d-flex align-items-center gap-2" disabled={submitting}>
+                {submitting ? <span className="spinner-border spinner-border-sm" role="status"></span> : <i className="bi bi-check-lg"></i>}
+                {submitting ? 'Saving…' : 'Save Product'}
               </button>
             </div>
           </form>

@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(isFirebaseConfigured);
+  const [profileError, setProfileError] = useState(null);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
@@ -27,10 +28,18 @@ export function AuthProvider({ children }) {
     if (!isFirebaseConfigured || !user) return;
 
     setLoading(true);
-    const unsubProfile = onSnapshot(doc(db, 'users', user.uid), (snap) => {
-      setProfile(snap.exists() ? { id: snap.id, ...snap.data() } : null);
-      setLoading(false);
-    });
+    setProfileError(null);
+    const unsubProfile = onSnapshot(
+      doc(db, 'users', user.uid),
+      (snap) => {
+        setProfile(snap.exists() ? { id: snap.id, ...snap.data() } : null);
+        setLoading(false);
+      },
+      (error) => {
+        setProfileError(error);
+        setLoading(false);
+      },
+    );
     return unsubProfile;
   }, [user]);
 
@@ -42,7 +51,7 @@ export function AuthProvider({ children }) {
   const isCashier = profile?.role === 'cashier';
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, logout, isOwnerOrAdmin, isOwner, isCashier }}>
+    <AuthContext.Provider value={{ user, profile, loading, profileError, login, logout, isOwnerOrAdmin, isOwner, isCashier }}>
       {!isFirebaseConfigured ? <FirebaseNotConfigured /> : children}
     </AuthContext.Provider>
   );
@@ -51,7 +60,12 @@ export function AuthProvider({ children }) {
 function FirebaseNotConfigured() {
   return (
     <div className="d-flex flex-column align-items-center justify-content-center text-center p-4" style={{ minHeight: '100vh' }}>
-      <div className="fs-1 mb-3">🏪</div>
+      <div
+        className="rounded-4 d-flex align-items-center justify-content-center mb-3 text-white"
+        style={{ width: 56, height: 56, background: 'var(--sari-ink)' }}
+      >
+        <i className="bi bi-plug fs-3"></i>
+      </div>
       <h1 className="h4">Firebase isn't configured yet</h1>
       <p className="text-secondary" style={{ maxWidth: 480 }}>
         Copy <code>.env.example</code> to <code>.env</code> and fill in your Firebase project's config values

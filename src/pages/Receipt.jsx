@@ -22,18 +22,24 @@ export default function Receipt() {
   return (
     <Layout header={
       <div className="d-flex justify-content-between align-items-center">
-        <h2 className="h4 mb-0">Receipt</h2>
+        <h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-receipt text-primary"></i> Receipt</h2>
         <div className="d-print-none">
-          <Link to="/pos" className="btn btn-outline-secondary btn-sm">← New Sale</Link>
-          <button onClick={() => window.print()} className="btn btn-primary btn-sm ms-2">🖨 Print</button>
+          <Link to="/pos" className="btn btn-outline-secondary btn-sm"><i className="bi bi-arrow-left me-1"></i>New Sale</Link>
+          <button onClick={() => window.print()} className="btn btn-primary btn-sm ms-2"><i className="bi bi-printer me-1"></i>Print</button>
         </div>
       </div>
     }>
-      <div className="card mx-auto" style={{ maxWidth: 380 }}>
+      <div className="card mx-auto shadow-sm" style={{ maxWidth: 380 }}>
         <div className="card-body font-monospace">
           <div className="text-center mb-3">
+            <div
+              className="rounded-circle d-inline-flex align-items-center justify-content-center mb-2"
+              style={{ width: 44, height: 44, background: 'var(--bs-primary-bg-subtle)', color: 'var(--bs-primary-text-emphasis)' }}
+            >
+              <i className="bi bi-check-lg fs-4"></i>
+            </div>
             <div className="fw-bold fs-5">SARI-SARI STORE</div>
-            <div className="small">Official Receipt</div>
+            <div className="small text-secondary">Official Receipt</div>
           </div>
 
           <div className="small mb-2">
@@ -91,7 +97,7 @@ export default function Receipt() {
             </div>
           )}
 
-          <div className="text-center mt-4 fw-bold">THANK YOU!</div>
+          <div className="text-center mt-4 fw-bold">Thank you!</div>
         </div>
       </div>
     </Layout>

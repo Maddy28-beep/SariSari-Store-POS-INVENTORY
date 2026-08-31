@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
+import StatCard from '../components/StatCard';
 import { getSalesInRange, getSaleItemsInRange, getStockReport } from '../services/reports';
 import { getRecentSales } from '../services/sales';
 import { getAllUsers } from '../services/users';
@@ -48,60 +49,44 @@ export default function Dashboard() {
         <div className="text-center py-5"><div className="spinner-border text-primary" /></div>
       ) : (
         <>
-          <div className="row g-3 mb-4">
+          <div className="row g-3 mb-3">
             <div className="col-md-4">
-              <div className="card stat-card h-100">
-                <div className="card-body">
-                  <div className="text-secondary small text-uppercase">Today's Sales</div>
-                  <div className="fs-3 fw-bold">₱{stats.salesTotal.toFixed(2)}</div>
-                </div>
-              </div>
+              <StatCard icon="bi-cash-stack" label="Today's Sales" value={`₱${stats.salesTotal.toFixed(2)}`} />
             </div>
             <div className="col-md-4">
-              <div className="card stat-card h-100">
-                <div className="card-body">
-                  <div className="text-secondary small text-uppercase">Transactions</div>
-                  <div className="fs-3 fw-bold">{stats.transactionCount}</div>
-                </div>
-              </div>
+              <StatCard icon="bi-receipt" label="Transactions" value={stats.transactionCount} />
             </div>
             <div className="col-md-4">
-              <div className="card stat-card h-100">
-                <div className="card-body">
-                  <div className="text-secondary small text-uppercase">Items Sold</div>
-                  <div className="fs-3 fw-bold">{stats.itemsSold}</div>
-                </div>
-              </div>
+              <StatCard icon="bi-bag-check" label="Items Sold" value={stats.itemsSold} />
             </div>
           </div>
 
           <div className="row g-3 mb-4">
             <div className="col-md-6">
-              <div className="card stat-card warning h-100">
-                <div className="card-body d-flex justify-content-between align-items-center">
-                  <div>
-                    <div className="text-secondary small text-uppercase">⚠ Low Stock</div>
-                    <div className="fs-4 fw-bold">{stats.lowStockCount} products</div>
-                  </div>
-                  <Link to="/inventory?stock_status=low" className="btn btn-sm btn-outline-warning">View</Link>
-                </div>
-              </div>
+              <StatCard
+                icon="bi-exclamation-triangle-fill"
+                variant="warning"
+                label="Low Stock"
+                value={`${stats.lowStockCount} products`}
+                action={<Link to="/inventory?stock_status=low" className="btn btn-sm btn-outline-warning">View</Link>}
+              />
             </div>
             <div className="col-md-6">
-              <div className="card stat-card danger h-100">
-                <div className="card-body d-flex justify-content-between align-items-center">
-                  <div>
-                    <div className="text-secondary small text-uppercase">🔴 Out of Stock</div>
-                    <div className="fs-4 fw-bold">{stats.outOfStockCount} products</div>
-                  </div>
-                  <Link to="/inventory?stock_status=out" className="btn btn-sm btn-outline-danger">View</Link>
-                </div>
-              </div>
+              <StatCard
+                icon="bi-x-octagon-fill"
+                variant="danger"
+                label="Out of Stock"
+                value={`${stats.outOfStockCount} products`}
+                action={<Link to="/inventory?stock_status=out" className="btn btn-sm btn-outline-danger">View</Link>}
+              />
             </div>
           </div>
 
           <div className="card">
-            <div className="card-header">Recent Sales</div>
+            <div className="card-header d-flex align-items-center gap-2">
+              <i className="bi bi-clock-history text-secondary"></i>
+              Recent Sales
+            </div>
             <div className="table-responsive">
               <table className="table table-hover mb-0 align-middle">
                 <thead>
@@ -115,14 +100,26 @@ export default function Dashboard() {
                 </thead>
                 <tbody>
                   {recentSales.length === 0 ? (
-                    <tr><td colSpan={5} className="text-center text-secondary py-4">No sales yet today.</td></tr>
+                    <tr>
+                      <td colSpan={5} className="text-center text-secondary py-5">
+                        <i className="bi bi-inbox fs-3 d-block mb-2 opacity-50"></i>
+                        No sales yet today.
+                      </td>
+                    </tr>
                   ) : recentSales.map((sale) => (
                     <tr key={sale.id}>
-                      <td><Link to={`/pos/receipt/${sale.id}`}>{sale.transactionNo}</Link></td>
+                      <td><Link to={`/pos/receipt/${sale.id}`} className="font-monospace small fw-semibold">{sale.transactionNo}</Link></td>
                       <td>{usersById[sale.cashierId] || '—'}</td>
-                      <td className="text-uppercase">{sale.paymentMethod}</td>
-                      <td className="text-end">₱{sale.total.toFixed(2)}</td>
-                      <td>{sale.createdAt?.toDate?.().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '—'}</td>
+                      <td>
+                        <span className="badge text-bg-light border text-uppercase">
+                          {sale.paymentMethod === 'cash' && <i className="bi bi-cash me-1"></i>}
+                          {sale.paymentMethod === 'gcash' && <i className="bi bi-phone me-1"></i>}
+                          {sale.paymentMethod === 'other' && <i className="bi bi-three-dots me-1"></i>}
+                          {sale.paymentMethod}
+                        </span>
+                      </td>
+                      <td className="text-end fw-semibold">₱{sale.total.toFixed(2)}</td>
+                      <td className="text-secondary">{sale.createdAt?.toDate?.().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '—'}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -105,5 +105,12 @@ service cloud.firestore {
       allow create: if isActive();
       allow update, delete: if false;
     }
+
+    // Reports run a collectionGroup('items') query across every sale's line items.
+    // A nested match under /sales/{id}/items only covers direct subcollection reads —
+    // collectionGroup queries need this separate wildcard rule to be authorized.
+    match /{path=**}/items/{itemId} {
+      allow read: if isActive();
+    }
   }
 }
