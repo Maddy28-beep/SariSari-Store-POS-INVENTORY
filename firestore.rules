@@ -1,0 +1,109 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function myRole() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? myProfile().role
+        : null;
+    }
+
+    function isActive() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && myProfile().isActive == true;
+    }
+
+    function isOwnerOrAdmin() {
+      return isActive() && (myRole() == 'owner' || myRole() == 'admin');
+    }
+
+    function isOwner() {
+      return isActive() && myRole() == 'owner';
+    }
+
+    // Users: everyone signed in can read (needed for cashier-name lookups in reports);
+    // only Owner can create/edit roles; a user may edit their own name.
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner();
+      allow update: if isOwner()
+        || (isSignedIn() && request.auth.uid == userId
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.isActive == resource.data.isActive);
+      allow delete: if false;
+    }
+
+    // Catalog data: read by any active staff, write by Owner/Admin only.
+    match /categories/{id} {
+      allow read: if isActive();
+      allow write: if isOwnerOrAdmin();
+    }
+    match /units/{id} {
+      allow read: if isActive();
+      allow write: if isOwnerOrAdmin();
+    }
+    match /suppliers/{id} {
+      allow read: if isActive();
+      allow write: if isOwnerOrAdmin();
+    }
+
+    // Products: everyone active can read (POS needs it); only Owner/Admin can create/edit.
+    // currentStock is also touched by cashiers indirectly via sale transactions, so allow
+    // active staff to update just stock-related fields while keeping price edits Owner/Admin-only.
+    match /products/{id} {
+      allow read: if isActive();
+      allow create: if isOwnerOrAdmin();
+      allow update: if isOwnerOrAdmin()
+        || (isActive()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['currentStock', 'updatedAt']));
+      allow delete: if false;
+    }
+
+    match /productBatches/{id} {
+      allow read: if isActive();
+      allow create: if isOwnerOrAdmin();
+      allow update, delete: if false;
+    }
+
+    match /inventoryTransactions/{id} {
+      allow read: if isActive();
+      allow create: if isActive() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Sales are an append-only ledger written by the cashier who made the sale.
+    match /sales/{saleId} {
+      allow read: if isActive();
+      allow create: if isActive() && request.resource.data.cashierId == request.auth.uid;
+      allow update, delete: if false;
+
+      match /items/{itemId} {
+        allow read: if isActive();
+        allow create: if isActive();
+        allow update, delete: if false;
+      }
+    }
+
+    match /expenses/{id} {
+      allow read: if isOwnerOrAdmin();
+      allow create: if isActive() && request.resource.data.recordedBy == request.auth.uid;
+      allow update, delete: if isOwnerOrAdmin();
+    }
+
+    match /auditLogs/{id} {
+      allow read: if isOwnerOrAdmin();
+      allow create: if isActive();
+      allow update, delete: if false;
+    }
+  }
+}
