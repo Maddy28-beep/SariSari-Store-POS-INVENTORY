@@ -117,7 +117,7 @@ export default function Dashboard() {
                         <span className="badge text-bg-light border text-uppercase">
                           {sale.paymentMethod === 'cash' && <i className="bi bi-cash me-1"></i>}
                           {sale.paymentMethod === 'gcash' && <i className="bi bi-phone me-1"></i>}
-                          {sale.paymentMethod === 'other' && <i className="bi bi-three-dots me-1"></i>}
+                          {sale.paymentMethod === 'split' && <i className="bi bi-arrow-left-right me-1"></i>}
                           {sale.paymentMethod}
                         </span>
                       </td>

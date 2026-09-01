@@ -19,9 +19,16 @@ async function generateTransactionNo() {
 
 /**
  * items: [{ productId, quantity }]
+ * paymentMethod: 'cash' | 'gcash' | 'split'
+ *   - cash: amountTendered is what was handed over; change comes back
+ *   - gcash: paymentReference is the transfer reference; no change
+ *   - split: gcashAmount is charged to GCash, amountTendered is the cash
+ *     handed over for the remainder; change comes only from the cash leg
  * Validates stock, deducts inventory, and records the sale atomically.
  */
-export async function checkout({ items, discount = 0, paymentMethod, amountTendered, paymentReference, cashierId }) {
+export async function checkout({
+  items, discount = 0, paymentMethod, amountTendered, paymentReference, gcashAmount, cashierId,
+}) {
   if (!items?.length) throw new Error('Cart is empty.');
 
   const transactionNo = await generateTransactionNo();
@@ -60,13 +67,33 @@ export async function checkout({ items, discount = 0, paymentMethod, amountTende
 
     const total = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
 
-    let tendered = amountTendered;
+    let tendered;
     let change = 0;
+    let payments;
+
     if (paymentMethod === 'cash') {
+      tendered = amountTendered;
       if (tendered < total) throw new Error('Amount tendered is less than the total.');
       change = Math.round((tendered - total) * 100) / 100;
-    } else {
+      payments = [{ method: 'cash', amount: total, tendered, change }];
+    } else if (paymentMethod === 'gcash') {
       tendered = amountTendered ?? total;
+      payments = [{ method: 'gcash', amount: total, reference: paymentReference || null }];
+    } else if (paymentMethod === 'split') {
+      const gcashPortion = Math.round((Number(gcashAmount) || 0) * 100) / 100;
+      if (gcashPortion <= 0 || gcashPortion >= total) {
+        throw new Error('GCash amount must be more than ₱0 and less than the total for a split payment.');
+      }
+      const cashPortion = Math.round((total - gcashPortion) * 100) / 100;
+      tendered = amountTendered;
+      if (tendered < cashPortion) throw new Error('Cash tendered is less than the remaining balance after GCash.');
+      change = Math.round((tendered - cashPortion) * 100) / 100;
+      payments = [
+        { method: 'gcash', amount: gcashPortion, reference: paymentReference || null },
+        { method: 'cash', amount: cashPortion, tendered, change },
+      ];
+    } else {
+      throw new Error('Unknown payment method.');
     }
 
     const saleRef = doc(collection(db, 'sales'));
@@ -77,6 +104,7 @@ export async function checkout({ items, discount = 0, paymentMethod, amountTende
       discount,
       total,
       paymentMethod,
+      payments,
       amountTendered: tendered,
       changeAmount: change,
       paymentReference: paymentReference || null,

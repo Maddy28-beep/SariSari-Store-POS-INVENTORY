@@ -5,6 +5,14 @@ import { useAuth } from '../context/AuthContext';
 import { getSaleWithItems } from '../services/sales';
 import { requestVoid, approveVoid, rejectVoid } from '../services/voids';
 
+/** Sales created before the `payments` array existed only have the flat legacy fields. */
+function legacyPayments(sale) {
+  if (sale.paymentMethod === 'cash') {
+    return [{ method: 'cash', amount: sale.total, tendered: sale.amountTendered, change: sale.changeAmount }];
+  }
+  return [{ method: sale.paymentMethod, amount: sale.total, reference: sale.paymentReference }];
+}
+
 export default function Receipt() {
   const { saleId } = useParams();
   const { profile, isOwnerOrAdmin } = useAuth();
@@ -139,23 +147,42 @@ export default function Receipt() {
             <span>Payment</span>
             <span className="text-uppercase">{sale.paymentMethod}</span>
           </div>
-          {sale.paymentMethod === 'cash' ? (
-            <>
-              <div className="d-flex justify-content-between">
-                <span>Tendered</span>
-                <span>₱{sale.amountTendered.toFixed(2)}</span>
-              </div>
-              <div className="d-flex justify-content-between">
-                <span>Change</span>
-                <span>₱{sale.changeAmount.toFixed(2)}</span>
-              </div>
-            </>
-          ) : sale.paymentReference && (
-            <div className="d-flex justify-content-between">
-              <span>Reference</span>
-              <span>{sale.paymentReference}</span>
+          {(sale.payments || legacyPayments(sale)).map((p, idx) => (
+            <div key={idx} className="mt-1">
+              {sale.paymentMethod === 'split' && (
+                <div className="small text-secondary text-uppercase">{p.method}</div>
+              )}
+              {p.method === 'cash' ? (
+                <>
+                  <div className="d-flex justify-content-between">
+                    <span>{sale.paymentMethod === 'split' ? 'Cash portion' : 'Amount'}</span>
+                    <span>₱{p.amount.toFixed(2)}</span>
+                  </div>
+                  <div className="d-flex justify-content-between">
+                    <span>Tendered</span>
+                    <span>₱{p.tendered.toFixed(2)}</span>
+                  </div>
+                  <div className="d-flex justify-content-between">
+                    <span>Change</span>
+                    <span>₱{p.change.toFixed(2)}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="d-flex justify-content-between">
+                    <span>{sale.paymentMethod === 'split' ? 'GCash portion' : 'Amount'}</span>
+                    <span>₱{p.amount.toFixed(2)}</span>
+                  </div>
+                  {p.reference && (
+                    <div className="d-flex justify-content-between">
+                      <span>Reference</span>
+                      <span>{p.reference}</span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          )}
+          ))}
 
           <div className="text-center mt-4 fw-bold">Thank you!</div>
         </div>

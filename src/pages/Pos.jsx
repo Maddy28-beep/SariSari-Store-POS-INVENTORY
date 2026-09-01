@@ -17,6 +17,7 @@ export default function Pos() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountTendered, setAmountTendered] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
+  const [gcashAmount, setGcashAmount] = useState('');
   const [scanError, setScanError] = useState('');
   const [checkoutError, setCheckoutError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -41,7 +42,17 @@ export default function Pos() {
   const subtotal = cart.reduce((sum, i) => sum + i.sellingPrice * i.quantity, 0);
   const total = Math.max(0, subtotal - (Number(discount) || 0));
   const change = (Number(amountTendered) || 0) - total;
-  const canCheckout = cart.length > 0 && (paymentMethod !== 'cash' || (Number(amountTendered) || 0) >= total);
+
+  const gcashPortion = Number(gcashAmount) || 0;
+  const cashRemaining = Math.max(0, total - gcashPortion);
+  const splitChange = (Number(amountTendered) || 0) - cashRemaining;
+  const splitValid = gcashPortion > 0 && gcashPortion < total && (Number(amountTendered) || 0) >= cashRemaining;
+
+  const canCheckout = cart.length > 0 && (
+    paymentMethod === 'gcash' ||
+    (paymentMethod === 'cash' && (Number(amountTendered) || 0) >= total) ||
+    (paymentMethod === 'split' && splitValid)
+  );
 
   function addProduct(p) {
     if (p.currentStock <= 0) {
@@ -132,8 +143,9 @@ export default function Pos() {
         items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity })),
         discount: Number(discount) || 0,
         paymentMethod,
-        amountTendered: paymentMethod === 'cash' ? Number(amountTendered) || 0 : Number(amountTendered) || total,
+        amountTendered: paymentMethod === 'gcash' ? total : Number(amountTendered) || 0,
         paymentReference: paymentReference || null,
+        gcashAmount: paymentMethod === 'split' ? gcashPortion : undefined,
         cashierId: profile.id,
       });
       navigate(`/pos/receipt/${saleId}`);
@@ -267,7 +279,7 @@ export default function Pos() {
                 {[
                   { key: 'cash', icon: 'bi-cash', label: 'Cash' },
                   { key: 'gcash', icon: 'bi-phone', label: 'GCash' },
-                  { key: 'other', icon: 'bi-three-dots', label: 'Other' },
+                  { key: 'split', icon: 'bi-arrow-left-right', label: 'Split' },
                 ].map((pm) => (
                   <button
                     key={pm.key} type="button"
@@ -279,7 +291,7 @@ export default function Pos() {
                 ))}
               </div>
 
-              {paymentMethod === 'cash' ? (
+              {paymentMethod === 'cash' && (
                 <div className="mb-3">
                   <label className="form-label small fw-semibold">Cash Tendered</label>
                   <input type="number" className="form-control form-control-lg" min="0" step="0.01" value={amountTendered} onChange={(e) => setAmountTendered(e.target.value)} />
@@ -288,10 +300,42 @@ export default function Pos() {
                     <span className={`fw-bold ${change < 0 ? 'text-danger' : 'text-success'}`}>₱{change.toFixed(2)}</span>
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {paymentMethod === 'gcash' && (
                 <div className="mb-3">
                   <label className="form-label small fw-semibold">Reference Number (optional)</label>
                   <input type="text" className="form-control" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} />
+                </div>
+              )}
+
+              {paymentMethod === 'split' && (
+                <div className="mb-3 d-flex flex-column gap-2">
+                  <div>
+                    <label className="form-label small fw-semibold">GCash Amount</label>
+                    <input type="number" className="form-control" min="0" step="0.01" max={total} value={gcashAmount} onChange={(e) => setGcashAmount(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="form-label small fw-semibold">GCash Reference (optional)</label>
+                    <input type="text" className="form-control" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} />
+                  </div>
+                  <div className="d-flex justify-content-between text-secondary small">
+                    <span>Remaining balance (cash)</span>
+                    <span>₱{cashRemaining.toFixed(2)}</span>
+                  </div>
+                  <div>
+                    <label className="form-label small fw-semibold">Cash Tendered</label>
+                    <input type="number" className="form-control form-control-lg" min="0" step="0.01" value={amountTendered} onChange={(e) => setAmountTendered(e.target.value)} />
+                  </div>
+                  <div className="d-flex justify-content-between fs-5">
+                    <span className="text-secondary">Change</span>
+                    <span className={`fw-bold ${splitChange < 0 ? 'text-danger' : 'text-success'}`}>₱{splitChange.toFixed(2)}</span>
+                  </div>
+                  {gcashPortion >= total && gcashPortion > 0 && (
+                    <div className="small text-danger d-flex align-items-center gap-1">
+                      <i className="bi bi-exclamation-circle"></i> GCash amount must be less than the total — the rest comes from cash.
+                    </div>
+                  )}
                 </div>
               )}
 

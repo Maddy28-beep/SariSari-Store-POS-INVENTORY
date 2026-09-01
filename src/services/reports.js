@@ -54,11 +54,16 @@ export function summarizeReports(sales, items) {
   });
   const bestSellers = Object.values(byProduct).sort((a, b) => b.qty - a.qty).slice(0, 10);
 
+  // Break split sales into their cash/gcash legs so the summary reflects actual money
+  // collected per method rather than lumping a split sale's whole total into one bucket.
   const byPayment = {};
   sales.forEach((s) => {
-    if (!byPayment[s.paymentMethod]) byPayment[s.paymentMethod] = { method: s.paymentMethod, count: 0, total: 0 };
-    byPayment[s.paymentMethod].count += 1;
-    byPayment[s.paymentMethod].total += s.total;
+    const legs = s.payments || [{ method: s.paymentMethod, amount: s.total }];
+    legs.forEach((leg) => {
+      if (!byPayment[leg.method]) byPayment[leg.method] = { method: leg.method, count: 0, total: 0 };
+      byPayment[leg.method].count += 1;
+      byPayment[leg.method].total += leg.amount;
+    });
   });
 
   const byCashier = {};

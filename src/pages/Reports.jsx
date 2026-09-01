@@ -103,7 +103,7 @@ export default function Reports() {
                   ) : summary.paymentSummary.map((item) => (
                     <li key={item.method} className="list-group-item d-flex justify-content-between">
                       <span className="text-uppercase fw-semibold">{item.method}</span>
-                      <span className="text-secondary">{item.count} txns — ₱{item.total.toFixed(2)}</span>
+                      <span className="text-secondary">{item.count} payments — ₱{item.total.toFixed(2)}</span>
                     </li>
                   ))}
                 </ul>
