@@ -81,6 +81,7 @@ export async function checkout({ items, discount = 0, paymentMethod, amountTende
       changeAmount: change,
       paymentReference: paymentReference || null,
       status: 'completed',
+      voidStatus: null,
       createdAt: serverTimestamp(),
     });
 

@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import StatCard from '../components/StatCard';
+import { useAuth } from '../context/AuthContext';
 import { getSalesInRange, getSaleItemsInRange, summarizeReports, getStockReport } from '../services/reports';
 import { getAllUsers } from '../services/users';
 
 const PERIODS = { daily: 'Today', weekly: 'This Week', monthly: 'This Month' };
 
 export default function Reports() {
+  const { isOwnerOrAdmin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const period = searchParams.get('period') || 'daily';
 
@@ -30,7 +32,7 @@ export default function Reports() {
       setStock(stockReport);
       setLoading(false);
     })();
-  }, [period]);
+  }, [period, isOwnerOrAdmin]);
 
   return (
     <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-graph-up-arrow text-primary"></i> Reports</h2>}>
@@ -52,7 +54,7 @@ export default function Reports() {
       ) : (
         <>
           <div className="row g-3 mb-4">
-            <div className="col-md-6">
+            <div className={isOwnerOrAdmin ? 'col-md-6' : 'col-12'}>
               <StatCard
                 icon="bi-cash-stack"
                 label={`Total Sales (${PERIODS[period]})`}
@@ -60,14 +62,16 @@ export default function Reports() {
                 sublabel={`${summary.transactionCount} transactions`}
               />
             </div>
-            <div className="col-md-6">
-              <StatCard
-                icon="bi-archive"
-                label="Inventory Valuation"
-                value={`₱${stock.retailValue.toFixed(2)}`}
-                sublabel={`Cost: ₱${stock.costValue.toFixed(2)}`}
-              />
-            </div>
+            {isOwnerOrAdmin && (
+              <div className="col-md-6">
+                <StatCard
+                  icon="bi-archive"
+                  label="Inventory Valuation"
+                  value={`₱${stock.retailValue.toFixed(2)}`}
+                  sublabel={`Cost: ₱${stock.costValue.toFixed(2)}`}
+                />
+              </div>
+            )}
           </div>
 
           <div className="row g-3 mb-4">

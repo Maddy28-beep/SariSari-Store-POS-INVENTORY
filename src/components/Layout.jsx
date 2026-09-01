@@ -1,19 +1,31 @@
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
 
-function SidebarLink({ to, icon, children }) {
+function SidebarLink({ to, icon, badge, children }) {
   return (
     <li>
       <NavLink to={to} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end={to === '/'}>
         <i className={`bi ${icon}`}></i>
-        <span>{children}</span>
+        <span className="flex-grow-1">{children}</span>
+        {badge > 0 && <span className="badge text-bg-danger rounded-pill">{badge}</span>}
       </NavLink>
     </li>
   );
 }
 
 export default function Layout({ children, header }) {
-  const { profile, logout } = useAuth();
+  const { profile, logout, isOwnerOrAdmin } = useAuth();
+  const [pendingVoidCount, setPendingVoidCount] = useState(0);
+
+  useEffect(() => {
+    if (!isOwnerOrAdmin) return;
+    const q = query(collection(db, 'sales'), where('voidStatus', '==', 'pending'));
+    const unsub = onSnapshot(q, (snap) => setPendingVoidCount(snap.size));
+    return unsub;
+  }, [isOwnerOrAdmin]);
 
   return (
     <div className="d-flex" style={{ minHeight: '100vh' }}>
@@ -31,6 +43,9 @@ export default function Layout({ children, header }) {
             <SidebarLink to="/stock-in" icon="bi-box-arrow-in-down">Stock In</SidebarLink>
           )}
           <SidebarLink to="/reports" icon="bi-graph-up-arrow">Reports</SidebarLink>
+          {isOwnerOrAdmin && (
+            <SidebarLink to="/void-requests" icon="bi-shield-exclamation" badge={pendingVoidCount}>Void Requests</SidebarLink>
+          )}
           {profile?.role === 'owner' && <SidebarLink to="/users" icon="bi-people-fill">Users</SidebarLink>}
         </ul>
         <hr />

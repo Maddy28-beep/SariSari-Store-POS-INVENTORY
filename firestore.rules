@@ -82,10 +82,28 @@ service cloud.firestore {
     }
 
     // Sales are an append-only ledger written by the cashier who made the sale.
+    // The only allowed mutation after creation is the void-request lifecycle:
+    //   1. Any active staff member can flag a completed sale as a pending void request.
+    //   2. Only Owner/Admin can approve (marks it voided) or reject a pending request.
     match /sales/{saleId} {
       allow read: if isActive();
       allow create: if isActive() && request.resource.data.cashierId == request.auth.uid;
-      allow update, delete: if false;
+
+      allow update: if isActive()
+        && resource.data.status == 'completed'
+        && resource.data.get('voidStatus', null) in [null, 'rejected']
+        && request.resource.data.voidStatus == 'pending'
+        && request.resource.data.voidRequestedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['voidStatus', 'voidRequestedBy', 'voidRequestedAt', 'voidReason']);
+
+      allow update: if isOwnerOrAdmin()
+        && resource.data.get('voidStatus', null) == 'pending'
+        && request.resource.data.voidStatus in ['approved', 'rejected']
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['voidStatus', 'status', 'voidReviewedBy', 'voidReviewedAt', 'voidReviewNote']);
+
+      allow delete: if false;
 
       match /items/{itemId} {
         allow read: if isActive();

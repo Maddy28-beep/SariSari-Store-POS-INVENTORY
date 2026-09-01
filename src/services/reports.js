@@ -40,8 +40,14 @@ export function summarizeReports(sales, items) {
   const totalSales = sales.reduce((sum, s) => sum + s.total, 0);
   const transactionCount = sales.length;
 
+  // `items` comes from a collectionGroup query that has no idea whether its parent
+  // sale later got voided, so cross-reference against the (already status-filtered)
+  // completed sales list before counting anything toward best-sellers.
+  const completedSaleIds = new Set(sales.map((s) => s.id));
+  const validItems = items.filter((item) => completedSaleIds.has(item.saleId));
+
   const byProduct = {};
-  items.forEach((item) => {
+  validItems.forEach((item) => {
     if (!byProduct[item.productName]) byProduct[item.productName] = { productName: item.productName, qty: 0, revenue: 0 };
     byProduct[item.productName].qty += item.quantity;
     byProduct[item.productName].revenue += item.lineTotal;

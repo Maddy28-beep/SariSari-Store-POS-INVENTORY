@@ -23,7 +23,10 @@ export default function Dashboard() {
       ]);
 
       const salesTotal = sales.reduce((sum, s) => sum + s.total, 0);
-      const itemsSold = items.reduce((sum, i) => sum + i.quantity, 0);
+      const completedSaleIds = new Set(sales.map((s) => s.id));
+      const itemsSold = items
+        .filter((i) => completedSaleIds.has(i.saleId))
+        .reduce((sum, i) => sum + i.quantity, 0);
 
       setUsersById(Object.fromEntries(users.map((u) => [u.id, u.name])));
       setStats({

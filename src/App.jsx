@@ -13,6 +13,7 @@ import Users from './pages/Users';
 import UserCreate from './pages/UserCreate';
 import UserEdit from './pages/UserEdit';
 import Settings from './pages/Settings';
+import VoidRequests from './pages/VoidRequests';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
       <Route path="/inventory/new" element={<ProtectedRoute roles={['owner', 'admin']}><ProductCreate /></ProtectedRoute>} />
       <Route path="/inventory/:productId/edit" element={<ProtectedRoute roles={['owner', 'admin']}><ProductEdit /></ProtectedRoute>} />
       <Route path="/stock-in" element={<ProtectedRoute roles={['owner', 'admin']}><StockIn /></ProtectedRoute>} />
+      <Route path="/void-requests" element={<ProtectedRoute roles={['owner', 'admin']}><VoidRequests /></ProtectedRoute>} />
 
       <Route path="/users" element={<ProtectedRoute roles={['owner']}><Users /></ProtectedRoute>} />
       <Route path="/users/new" element={<ProtectedRoute roles={['owner']}><UserCreate /></ProtectedRoute>} />
