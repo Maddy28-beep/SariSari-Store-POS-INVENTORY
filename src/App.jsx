@@ -7,6 +7,7 @@ import Receipt from './pages/Receipt';
 import Inventory from './pages/Inventory';
 import ProductCreate from './pages/ProductCreate';
 import ProductEdit from './pages/ProductEdit';
+import ProductLabel from './pages/ProductLabel';
 import StockIn from './pages/StockIn';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
@@ -29,6 +30,7 @@ export default function App() {
 
       <Route path="/inventory/new" element={<ProtectedRoute roles={['owner', 'admin']}><ProductCreate /></ProtectedRoute>} />
       <Route path="/inventory/:productId/edit" element={<ProtectedRoute roles={['owner', 'admin']}><ProductEdit /></ProtectedRoute>} />
+      <Route path="/inventory/:productId/label" element={<ProtectedRoute roles={['owner', 'admin']}><ProductLabel /></ProtectedRoute>} />
       <Route path="/stock-in" element={<ProtectedRoute roles={['owner', 'admin']}><StockIn /></ProtectedRoute>} />
       <Route path="/void-requests" element={<ProtectedRoute roles={['owner', 'admin']}><VoidRequests /></ProtectedRoute>} />
 

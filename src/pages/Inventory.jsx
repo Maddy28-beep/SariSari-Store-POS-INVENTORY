@@ -120,9 +120,16 @@ export default function Inventory() {
                     </td>
                     {isOwnerOrAdmin && (
                       <td>
-                        <Link to={`/inventory/${product.id}/edit`} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
-                          <i className="bi bi-pencil"></i> Edit
-                        </Link>
+                        <div className="d-flex gap-1">
+                          <Link to={`/inventory/${product.id}/edit`} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                            <i className="bi bi-pencil"></i> Edit
+                          </Link>
+                          {product.barcode && (
+                            <Link to={`/inventory/${product.id}/label`} className="btn btn-sm btn-outline-secondary" title="Print barcode label">
+                              <i className="bi bi-printer"></i>
+                            </Link>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>

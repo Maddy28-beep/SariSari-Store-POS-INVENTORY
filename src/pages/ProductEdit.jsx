@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
+import BarcodeImage from '../components/BarcodeImage';
 import { useAuth } from '../context/AuthContext';
 import { getCategories, getUnits, getSuppliers } from '../services/catalog';
-import { getProduct, updateProduct } from '../services/products';
+import { getProduct, updateProduct, lookupByBarcode } from '../services/products';
 import { adjustStock } from '../services/inventory';
+import { generateInternalBarcode } from '../utils/barcode';
 
 export default function ProductEdit() {
   const { profile } = useAuth();
@@ -21,6 +23,8 @@ export default function ProductEdit() {
   const [adjustQty, setAdjustQty] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
   const [adjustStatus, setAdjustStatus] = useState('');
+  const [generatingBarcode, setGeneratingBarcode] = useState(false);
+  const [savedBarcode, setSavedBarcode] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -29,11 +33,25 @@ export default function ProductEdit() {
       setUnits(u);
       setSuppliers(s);
       setForm(product);
+      setSavedBarcode(product?.barcode || null);
     })();
   }, [productId]);
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  async function handleGenerateBarcode() {
+    setGeneratingBarcode(true);
+    try {
+      let candidate = generateInternalBarcode();
+      for (let attempt = 0; attempt < 3 && (await lookupByBarcode(candidate)); attempt++) {
+        candidate = generateInternalBarcode();
+      }
+      setForm((f) => ({ ...f, barcode: candidate }));
+    } finally {
+      setGeneratingBarcode(false);
+    }
   }
 
   async function handleSubmit(e) {
@@ -93,7 +111,28 @@ export default function ProductEdit() {
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
                   <label className="form-label">Barcode</label>
-                  <input type="text" className="form-control scan-input" value={form.barcode || ''} onChange={(e) => update('barcode', e.target.value)} />
+                  <div className="input-group">
+                    <input type="text" className="form-control scan-input" value={form.barcode || ''} onChange={(e) => update('barcode', e.target.value)} />
+                    <button
+                      type="button" className="btn btn-outline-secondary d-flex align-items-center gap-1"
+                      disabled={generatingBarcode} onClick={handleGenerateBarcode}
+                    >
+                      {generatingBarcode ? <span className="spinner-border spinner-border-sm" role="status"></span> : <i className="bi bi-magic"></i>}
+                      Generate
+                    </button>
+                  </div>
+                  {form.barcode && (
+                    <div className="mt-2 d-flex align-items-center gap-3">
+                      <BarcodeImage value={form.barcode} width={1.4} height={36} fontSize={10} />
+                      {form.barcode === savedBarcode ? (
+                        <Link to={`/inventory/${productId}/label`} className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 flex-shrink-0">
+                          <i className="bi bi-printer"></i> Print Label
+                        </Link>
+                      ) : (
+                        <span className="small text-secondary flex-shrink-0">Save changes to print this barcode</span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-3">

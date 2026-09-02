@@ -215,3 +215,45 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
   background: transparent;
   border-color: var(--bs-primary);
 }
+
+/* Barcode label sheet */
+.label-sheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.5rem;
+}
+
+.label-card {
+  border: 1px dashed #b8bfc6;
+  border-radius: 0.25rem;
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: #fff;
+}
+
+.label-card svg {
+  max-width: 100%;
+}
+
+@media print {
+  .app-sidebar,
+  .d-print-none {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .label-sheet {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .label-card {
+    border-style: solid;
+    break-inside: avoid;
+  }
+}

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { getCategories, getUnits, getSuppliers } from '../services/catalog';
 import { createProduct, lookupByBarcode } from '../services/products';
 import { moveStock, InventoryTypes } from '../services/inventory';
+import { generateInternalBarcode } from '../utils/barcode';
 
 export default function ProductCreate() {
   const { profile } = useAuth();
@@ -17,6 +18,8 @@ export default function ProductCreate() {
   const [duplicate, setDuplicate] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [generatingBarcode, setGeneratingBarcode] = useState(false);
+  const [wasGenerated, setWasGenerated] = useState(false);
 
   const [form, setForm] = useState({
     barcode: searchParams.get('barcode') || '',
@@ -50,6 +53,23 @@ export default function ProductCreate() {
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+    if (field === 'barcode') setWasGenerated(false);
+  }
+
+  async function handleGenerateBarcode() {
+    setGeneratingBarcode(true);
+    setDuplicate(null);
+    try {
+      let candidate = generateInternalBarcode();
+      // Collision odds are astronomically low, but check anyway before committing to it.
+      for (let attempt = 0; attempt < 3 && (await lookupByBarcode(candidate)); attempt++) {
+        candidate = generateInternalBarcode();
+      }
+      setForm((f) => ({ ...f, barcode: candidate }));
+      setWasGenerated(true);
+    } finally {
+      setGeneratingBarcode(false);
+    }
   }
 
   async function handleSubmit(e) {
@@ -80,7 +100,7 @@ export default function ProductCreate() {
         await moveStock(ref.id, InventoryTypes.BEGINNING, initial, { note: 'Initial stock on product creation', userId: profile.id });
       }
 
-      navigate('/inventory');
+      navigate(wasGenerated ? `/inventory/${ref.id}/label` : '/inventory');
     } catch (err) {
       setError(err.message || 'Something went wrong.');
     } finally {
@@ -102,11 +122,26 @@ export default function ProductCreate() {
               <label className="form-label small fw-semibold d-flex align-items-center gap-1">
                 <i className="bi bi-upc-scan"></i> Scan Barcode <span className="text-secondary fw-normal">(leave blank if none)</span>
               </label>
-              <input
-                type="text" className="form-control scan-input" value={form.barcode} autoFocus
-                onChange={(e) => update('barcode', e.target.value)}
-                onBlur={(e) => checkDuplicate(e.target.value)}
-              />
+              <div className="input-group">
+                <input
+                  type="text" className="form-control scan-input" value={form.barcode} autoFocus
+                  onChange={(e) => update('barcode', e.target.value)}
+                  onBlur={(e) => checkDuplicate(e.target.value)}
+                />
+                <button
+                  type="button" className="btn btn-outline-secondary d-flex align-items-center gap-1"
+                  disabled={generatingBarcode} onClick={handleGenerateBarcode}
+                >
+                  {generatingBarcode ? <span className="spinner-border spinner-border-sm" role="status"></span> : <i className="bi bi-magic"></i>}
+                  Generate
+                </button>
+              </div>
+              {wasGenerated && (
+                <div className="form-text">
+                  <i className="bi bi-info-circle me-1"></i>
+                  Internal barcode generated — you'll get a printable label right after saving.
+                </div>
+              )}
               {duplicate && (
                 <div className="alert alert-warning mt-2 py-2 small d-flex align-items-start gap-2">
                   <i className="bi bi-exclamation-triangle-fill mt-1"></i>
