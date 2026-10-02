@@ -25,19 +25,34 @@ export default function Login() {
   }
 
   return (
-    <div className="d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '100vh', background: 'var(--sari-ink)' }}>
-      <div className="d-flex flex-column align-items-center mb-4 text-white">
+    <div
+      className="d-flex flex-column align-items-center justify-content-center position-relative overflow-hidden"
+      style={{
+        minHeight: '100vh',
+        background: 'radial-gradient(circle at 15% 10%, #1a2e28 0%, transparent 45%), radial-gradient(circle at 85% 90%, #112a36 0%, transparent 45%), var(--sari-ink)',
+      }}
+    >
+      <div
+        className="position-absolute rounded-circle"
+        style={{ width: 420, height: 420, top: -140, right: -120, background: 'radial-gradient(circle, rgba(21,163,127,0.28), transparent 70%)', filter: 'blur(10px)' }}
+      />
+      <div
+        className="position-absolute rounded-circle"
+        style={{ width: 360, height: 360, bottom: -160, left: -120, background: 'radial-gradient(circle, rgba(11,110,143,0.22), transparent 70%)', filter: 'blur(10px)' }}
+      />
+
+      <div className="d-flex flex-column align-items-center mb-4 text-white position-relative">
         <div
           className="rounded-4 d-flex align-items-center justify-content-center mb-3"
-          style={{ width: 56, height: 56, background: 'var(--bs-primary)' }}
+          style={{ width: 60, height: 60, background: 'linear-gradient(135deg, var(--sari-accent), var(--bs-primary))', boxShadow: '0 10px 30px -8px rgba(21,163,127,0.6)' }}
         >
           <i className="bi bi-shop fs-3"></i>
         </div>
-        <div className="fs-4 fw-bold">Sarisari POS</div>
+        <div className="fs-3 fw-bold">Sarisari POS</div>
         <div className="text-white-50 small">Store management, made simple</div>
       </div>
 
-      <div className="card shadow-lg border-0" style={{ width: '100%', maxWidth: 380 }}>
+      <div className="card shadow-lg border-0 position-relative" style={{ width: '100%', maxWidth: 380, borderRadius: 'var(--sari-radius-lg)' }}>
         <div className="card-body p-4">
           {error && (
             <div className="alert alert-danger d-flex align-items-center gap-2 py-2">

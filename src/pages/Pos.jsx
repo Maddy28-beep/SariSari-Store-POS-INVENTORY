@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
-import { lookupByBarcode, searchByName } from '../services/products';
+import { lookupByBarcode, getAllProducts } from '../services/products';
+import { getCategories } from '../services/catalog';
 import { checkout } from '../services/sales';
 
 export default function Pos() {
@@ -11,7 +12,9 @@ export default function Pos() {
 
   const [barcodeInput, setBarcodeInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [activeCategory, setActiveCategory] = useState('all');
   const [cart, setCart] = useState([]);
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -23,21 +26,23 @@ export default function Pos() {
   const [submitting, setSubmitting] = useState(false);
 
   const barcodeRef = useRef(null);
-  const searchBoxRef = useRef(null);
 
   useEffect(() => {
     barcodeRef.current?.focus();
   }, []);
 
   useEffect(() => {
-    function handleClickOutside(e) {
-      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
-        setSearchResults([]);
-      }
-    }
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    Promise.all([getAllProducts(), getCategories()]).then(([p, c]) => {
+      setProducts(p.filter((x) => x.status === 'active'));
+      setCategories(c);
+    });
   }, []);
+
+  const q = searchQuery.trim().toLowerCase();
+  const visibleProducts = products.filter((p) =>
+    (activeCategory === 'all' || p.categoryId === activeCategory) &&
+    (!q || p.name.toLowerCase().includes(q)),
+  );
 
   const subtotal = cart.reduce((sum, i) => sum + i.sellingPrice * i.quantity, 0);
   const total = Math.max(0, subtotal - (Number(discount) || 0));
@@ -102,13 +107,6 @@ export default function Pos() {
 
     setBarcodeInput('');
     barcodeRef.current?.focus();
-  }
-
-  async function runSearch(text) {
-    setSearchQuery(text);
-    if (text.length < 1) { setSearchResults([]); return; }
-    const results = await searchByName(text);
-    setSearchResults(results);
   }
 
   function updateQty(index, delta) {
@@ -181,27 +179,14 @@ export default function Pos() {
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); scanBarcode(); } }}
                   />
                 </div>
-                <div className="col-md-5 position-relative" ref={searchBoxRef}>
+                <div className="col-md-5">
                   <label className="form-label small fw-semibold d-flex align-items-center gap-1">
                     <i className="bi bi-search"></i> Search Product
                   </label>
                   <input
-                    type="text" className="form-control" placeholder="For items without a barcode"
-                    value={searchQuery} onChange={(e) => runSearch(e.target.value)}
+                    type="text" className="form-control" placeholder="Type to filter the product list"
+                    value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                   />
-                  {searchResults.length > 0 && (
-                    <div className="list-group position-absolute w-100 shadow" style={{ zIndex: 1000 }}>
-                      {searchResults.map((p) => (
-                        <button
-                          key={p.id} type="button" className="list-group-item list-group-item-action d-flex justify-content-between"
-                          onClick={() => { addProduct(p); setSearchQuery(''); setSearchResults([]); }}
-                        >
-                          <span>{p.name}</span>
-                          <span className="text-secondary">₱{p.sellingPrice.toFixed(2)} / {p.unit}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
               {scanError && (
@@ -209,6 +194,43 @@ export default function Pos() {
                   <i className="bi bi-exclamation-circle"></i> {scanError}
                 </div>
               )}
+            </div>
+          </div>
+
+          <div className="card mb-3">
+            <div className="card-body">
+              <div className="d-flex gap-2 flex-wrap mb-3">
+                {[{ id: 'all', name: 'All' }, ...categories].map((c) => (
+                  <button
+                    key={c.id} type="button"
+                    className={`btn btn-sm rounded-pill ${activeCategory === c.id ? 'btn-primary' : 'btn-outline-secondary'}`}
+                    onClick={() => setActiveCategory(c.id)}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+              <div className="row g-2" style={{ maxHeight: 340, overflowY: 'auto' }}>
+                {visibleProducts.length === 0 ? (
+                  <div className="empty-state"><i className="bi bi-box-seam"></i>No products found.</div>
+                ) : visibleProducts.map((p) => (
+                  <div className="col-6 col-md-4 col-xl-3" key={p.id}>
+                    <button
+                      type="button" disabled={p.currentStock <= 0}
+                      className="btn btn-outline-secondary w-100 h-100 text-start d-flex flex-column justify-content-between p-2"
+                      onClick={() => addProduct(p)}
+                    >
+                      <span className="small fw-semibold text-body">{p.name}</span>
+                      <span className="d-flex justify-content-between align-items-center mt-1">
+                        <span className="fw-bold text-primary">₱{p.sellingPrice.toFixed(2)}</span>
+                        <span className={`small ${p.currentStock <= 0 ? 'text-danger' : 'text-secondary'}`}>
+                          {p.currentStock <= 0 ? 'Out' : `${p.currentStock} ${p.unit}`}
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -227,9 +249,11 @@ export default function Pos() {
                 <tbody>
                   {cart.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center text-secondary py-5">
-                        <i className="bi bi-upc-scan fs-1 d-block mb-2 opacity-25"></i>
-                        Scan or search a product to begin.
+                      <td colSpan={5}>
+                        <div className="empty-state">
+                          <i className="bi bi-upc-scan"></i>
+                          Scan a barcode or tap a product above to begin.
+                        </div>
                       </td>
                     </tr>
                   ) : cart.map((item, index) => (

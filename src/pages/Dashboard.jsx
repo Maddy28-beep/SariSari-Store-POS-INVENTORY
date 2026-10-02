@@ -104,9 +104,11 @@ export default function Dashboard() {
                 <tbody>
                   {recentSales.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center text-secondary py-5">
-                        <i className="bi bi-inbox fs-3 d-block mb-2 opacity-50"></i>
-                        No sales yet today.
+                      <td colSpan={5}>
+                        <div className="empty-state">
+                          <i className="bi bi-inbox"></i>
+                          No sales yet today.
+                        </div>
                       </td>
                     </tr>
                   ) : recentSales.map((sale) => (

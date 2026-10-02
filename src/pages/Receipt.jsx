@@ -92,7 +92,7 @@ export default function Receipt() {
         </div>
       </div>
     }>
-      <div className="card mx-auto shadow-sm" style={{ maxWidth: 380 }}>
+      <div className="card receipt-card mx-auto shadow-sm" style={{ maxWidth: 380 }}>
         <div className="card-body font-monospace">
           <div className="text-center mb-3">
             <div

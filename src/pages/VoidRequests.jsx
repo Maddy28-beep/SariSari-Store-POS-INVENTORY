@@ -80,9 +80,11 @@ export default function VoidRequests() {
                 <tr><td colSpan={6} className="text-center py-5"><div className="spinner-border text-primary" /></td></tr>
               ) : requests.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center text-secondary py-5">
-                    <i className="bi bi-check2-circle fs-1 d-block mb-2 opacity-25"></i>
-                    No pending void requests.
+                  <td colSpan={6}>
+                    <div className="empty-state">
+                      <i className="bi bi-check2-circle"></i>
+                      No pending void requests.
+                    </div>
                   </td>
                 </tr>
               ) : requests.map((sale) => (

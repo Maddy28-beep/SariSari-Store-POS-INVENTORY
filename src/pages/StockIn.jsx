@@ -133,9 +133,11 @@ export default function StockIn() {
             <tbody>
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center text-secondary py-5">
-                    <i className="bi bi-truck fs-1 d-block mb-2 opacity-25"></i>
-                    Scan products as they arrive from the supplier.
+                  <td colSpan={4}>
+                    <div className="empty-state">
+                      <i className="bi bi-truck"></i>
+                      Scan products as they arrive from the supplier.
+                    </div>
                   </td>
                 </tr>
               ) : items.map((item, index) => (

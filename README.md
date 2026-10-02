@@ -63,6 +63,16 @@ Log in as the Owner, go to **Settings**, and click **Seed Default Categories & U
 
 From there, use **Users** (Owner only) to create Cashier/Admin accounts — no need to touch the Firebase Console again.
 
+### Optional: seed a full demo catalog
+
+`npm run seed` fills the store with a ready-made Filipino sari-sari catalog — ~75 real products (Chippy, Piattos, Lucky Me, Century Tuna, Coca-Cola, Nescafé 3-in-1, Tide, Marlboro, rice, sugar, cooking oil, etc.) across Snacks, Instant Food, Grocery, Drinks, Coffee, Household, Tobacco, and Feeds, plus matching categories, units, and suppliers, each with realistic cost/selling prices and opening stock. It's idempotent — safe to run more than once, it skips anything already there.
+
+```bash
+npm run seed -- owner@email.com theirPassword
+```
+
+(or set `SEED_EMAIL` / `SEED_PASSWORD` in your environment instead of passing them on the command line). Must be an existing Owner or Admin account, since Firestore rules restrict catalog/product writes to that role.
+
 ## 6. Run locally
 
 ```bash

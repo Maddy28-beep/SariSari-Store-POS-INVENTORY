@@ -97,9 +97,11 @@ export default function Inventory() {
                 <tr><td colSpan={7} className="text-center py-5"><div className="spinner-border text-primary" /></td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center text-secondary py-5">
-                    <i className="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
-                    No products found.
+                  <td colSpan={7}>
+                    <div className="empty-state">
+                      <i className="bi bi-inbox"></i>
+                      No products found.
+                    </div>
                   </td>
                 </tr>
               ) : filtered.map((product) => {

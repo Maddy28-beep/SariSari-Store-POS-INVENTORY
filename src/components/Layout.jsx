@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
@@ -19,6 +19,10 @@ function SidebarLink({ to, icon, badge, children }) {
 export default function Layout({ children, header }) {
   const { profile, logout, isOwnerOrAdmin } = useAuth();
   const [pendingVoidCount, setPendingVoidCount] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
   useEffect(() => {
     if (!isOwnerOrAdmin) return;
@@ -27,11 +31,21 @@ export default function Layout({ children, header }) {
     return unsub;
   }, [isOwnerOrAdmin]);
 
+  const initials = (profile?.name || '?').trim().charAt(0).toUpperCase();
+
   return (
-    <div className="d-flex" style={{ minHeight: '100vh' }}>
-      <nav className="app-sidebar d-flex flex-column flex-shrink-0 p-3 text-white" style={{ width: 232 }}>
-        <a href="/" className="brand d-flex align-items-center gap-2 mb-3 text-white text-decoration-none fs-5">
-          <i className="bi bi-shop fs-4"></i>
+    <div className="d-flex app-shell" style={{ minHeight: '100vh' }}>
+      <header className="app-topbar d-lg-none d-print-none">
+        <button type="button" className="btn btn-link text-white p-0 fs-3 lh-1" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
+          <i className="bi bi-list"></i>
+        </button>
+        <span className="fw-bold">Sarisari POS</span>
+        <span className="avatar rounded-circle d-inline-flex align-items-center justify-content-center" style={{ width: 32, height: 32, fontSize: '0.8rem' }}>{initials}</span>
+      </header>
+      {menuOpen && <div className="app-backdrop d-lg-none" onClick={() => setMenuOpen(false)}></div>}
+      <nav className={`app-sidebar d-flex flex-column flex-shrink-0 p-3 text-white ${menuOpen ? 'open' : ''}`}>
+        <a href="/" className="brand d-flex align-items-center gap-2 mb-1 text-white text-decoration-none fs-5">
+          <span className="brand-icon flex-shrink-0"><i className="bi bi-shop fs-6"></i></span>
           <span>Sarisari POS</span>
         </a>
         <hr />
@@ -50,9 +64,9 @@ export default function Layout({ children, header }) {
         </ul>
         <hr />
         <div className="dropdown">
-          <a href="#" className="d-flex align-items-center gap-2 text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
-            <span className="rounded-circle bg-white bg-opacity-10 d-inline-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 30, height: 30 }}>
-              <i className="bi bi-person-fill"></i>
+          <a href="#" className="user-chip d-flex align-items-center gap-2 text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+            <span className="avatar rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 32, height: 32, fontSize: '0.8rem' }}>
+              {initials}
             </span>
             <span className="fw-semibold small text-truncate">{profile?.name}</span>
           </a>
@@ -69,8 +83,8 @@ export default function Layout({ children, header }) {
         </div>
       </nav>
 
-      <main className="flex-grow-1 p-4" style={{ overflowY: 'auto' }}>
-        {header && <div className="mb-4">{header}</div>}
+      <main className="app-main flex-grow-1 p-3 p-md-4" style={{ overflowY: 'auto' }}>
+        {header && <div className="page-header mb-3 mb-md-4">{header}</div>}
         {children}
       </main>
     </div>
