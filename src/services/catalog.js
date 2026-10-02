@@ -24,7 +24,7 @@ export async function seedDefaults() {
     { name: 'Gram', abbreviation: 'g', allowDecimal: true },
     { name: 'Liter', abbreviation: 'L', allowDecimal: true },
     { name: 'Milliliter', abbreviation: 'mL', allowDecimal: true },
-    { name: 'Sack', abbreviation: 'sack', allowDecimal: false },
+    { name: 'Sack', abbreviation: 'sack', allowDecimal: true },
     { name: 'Pack', abbreviation: 'pack', allowDecimal: false },
     { name: 'Box', abbreviation: 'box', allowDecimal: false },
   ];

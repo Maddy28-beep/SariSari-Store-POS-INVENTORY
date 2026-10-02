@@ -15,7 +15,7 @@ import path from 'node:path';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import {
-  getFirestore, collection, getDocs, addDoc, doc, runTransaction,
+  getFirestore, collection, getDocs, addDoc, doc, runTransaction, updateDoc,
   query, where, serverTimestamp, increment,
 } from 'firebase/firestore';
 
@@ -66,7 +66,7 @@ const UNITS = [
   { name: 'Gram', abbreviation: 'g', allowDecimal: true },
   { name: 'Liter', abbreviation: 'L', allowDecimal: true },
   { name: 'Milliliter', abbreviation: 'mL', allowDecimal: true },
-  { name: 'Sack', abbreviation: 'sack', allowDecimal: false },
+  { name: 'Sack', abbreviation: 'sack', allowDecimal: true },
   { name: 'Pack', abbreviation: 'pack', allowDecimal: false },
   { name: 'Box', abbreviation: 'box', allowDecimal: false },
 ];
@@ -219,6 +219,13 @@ async function main() {
       const ref = await addDoc(collection(db, 'units'), u);
       unitByAbbr.set(u.abbreviation, { id: ref.id, ...u });
       console.log(`  + unit: ${u.name}`);
+    } else if (!!unitByAbbr.get(u.abbreviation).allowDecimal !== u.allowDecimal) {
+      const old = unitByAbbr.get(u.abbreviation);
+      await updateDoc(doc(db, 'units', old.id), { allowDecimal: u.allowDecimal });
+      const prods = await getDocs(query(collection(db, 'products'), where('unitId', '==', old.id)));
+      for (const p of prods.docs) await updateDoc(p.ref, { allowDecimal: u.allowDecimal });
+      unitByAbbr.set(u.abbreviation, { ...old, allowDecimal: u.allowDecimal });
+      console.log(`  ~ unit ${u.name}: allowDecimal -> ${u.allowDecimal} (${prods.size} products)`);
     }
   }
 

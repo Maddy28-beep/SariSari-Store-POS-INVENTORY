@@ -6,6 +6,11 @@ import { lookupByBarcode, getAllProducts } from '../services/products';
 import { getCategories } from '../services/catalog';
 import { checkout } from '../services/sales';
 
+function stepFor(p) {
+  if (!p.allowDecimal) return 1;
+  return p.unit === 'sack' ? 0.5 : 0.01;
+}
+
 export default function Pos() {
   const { profile, isOwnerOrAdmin } = useAuth();
   const navigate = useNavigate();
@@ -69,7 +74,7 @@ export default function Pos() {
     setCart((prev) => {
       const existing = prev.find((i) => i.productId === p.id);
       if (existing) {
-        const step = p.allowDecimal ? 0.01 : 1;
+        const step = stepFor(p);
         if (existing.quantity + step > p.currentStock) {
           setScanError(`Only ${p.currentStock} ${p.unit} of "${p.name}" available.`);
           return prev;
@@ -112,7 +117,7 @@ export default function Pos() {
   function updateQty(index, delta) {
     setCart((prev) => {
       const item = prev[index];
-      const step = item.allowDecimal ? 0.01 : 1;
+      const step = stepFor(item);
       let qty = Math.round((item.quantity + delta * step) * 100) / 100;
       if (qty <= 0) return prev.filter((_, i) => i !== index);
       if (item.maxStock && qty > item.maxStock) qty = item.maxStock;
@@ -264,7 +269,7 @@ export default function Pos() {
                           <button className="btn btn-outline-secondary" onClick={() => updateQty(index, -1)}><i className="bi bi-dash"></i></button>
                           <input
                             type="number" className="form-control text-center"
-                            step={item.allowDecimal ? 0.01 : 1}
+                            step={stepFor(item)}
                             value={item.quantity}
                             onChange={(e) => setQty(index, e.target.value)}
                           />
