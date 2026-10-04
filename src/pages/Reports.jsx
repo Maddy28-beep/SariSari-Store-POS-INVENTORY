@@ -9,6 +9,8 @@ import {
 import { getAllUsers } from '../services/users';
 import { getExpensesInRange, summarizeExpenses } from '../services/expenses';
 import { downloadCsv } from '../utils/csv';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 const PRESETS = [
   { key: 'daily', label: 'Today', heading: 'Daily Sales Report' },
@@ -61,6 +63,14 @@ export default function Reports() {
   const [usersById, setUsersById] = useState({});
   const [loading, setLoading] = useState(true);
   const [reloadTick, setReloadTick] = useState(0);
+  const [printAll, setPrintAll] = useState(false);
+  const pager = usePagination(sales);
+
+  // A printed / PDF report must contain every row, not just the page on screen.
+  function printReport() {
+    setPrintAll(true);
+    setTimeout(() => { window.print(); setPrintAll(false); }, 150);
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -187,13 +197,13 @@ export default function Reports() {
             <button type="button" className="btn btn-outline-secondary" onClick={() => setReloadTick((t) => t + 1)}>
               <i className="bi bi-arrow-clockwise"></i> Refresh
             </button>
-            <button type="button" className="btn btn-outline-secondary" disabled={loading} onClick={() => window.print()}>
+            <button type="button" className="btn btn-outline-secondary" disabled={loading} onClick={printReport}>
               <i className="bi bi-printer"></i> Print
             </button>
             <button type="button" className="btn btn-outline-secondary" disabled={loading} onClick={handleDownload}>
               <i className="bi bi-filetype-csv"></i> Excel (CSV)
             </button>
-            <button type="button" className="btn btn-primary" disabled={loading} onClick={() => window.print()} title="Choose “Save as PDF” as the printer">
+            <button type="button" className="btn btn-primary" disabled={loading} onClick={printReport} title="Choose “Save as PDF” as the printer">
               <i className="bi bi-file-earmark-arrow-down"></i> Save as PDF
             </button>
           </div>
@@ -232,7 +242,7 @@ export default function Reports() {
                 <tbody>
                   {sales.length === 0 ? (
                     <tr><td colSpan={9} className="text-center text-secondary py-4">No sales in this period.</td></tr>
-                  ) : sales.map((s) => (
+                  ) : (printAll ? sales : pager.pageItems).map((s) => (
                     <tr key={s.id}>
                       <td className="text-nowrap col-hide-sm">{when(s)}</td>
                       <td>
@@ -267,6 +277,7 @@ export default function Reports() {
                 )}
               </table>
             </div>
+            <Pagination pager={pager} noun="receipts" />
 
             <div className="report-strip">
               <div><span>Cash collected</span> <strong>{money(paid('cash'))}</strong></div>

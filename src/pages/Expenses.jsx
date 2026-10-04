@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import StatCard from '../components/StatCard';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 import { useAuth } from '../context/AuthContext';
 import { getSalesInRange } from '../services/reports';
 import {
@@ -60,6 +62,7 @@ export default function Expenses() {
   }
 
   const { total, byCategory } = summarizeExpenses(expenses);
+  const pager = usePagination(expenses, 10);
   const net = salesTotal - total;
 
   return (
@@ -124,7 +127,7 @@ export default function Expenses() {
                     <tr><td colSpan={5} className="text-center py-4"><div className="spinner-border text-primary" /></td></tr>
                   ) : expenses.length === 0 ? (
                     <tr><td colSpan={5}><div className="empty-state"><i className="bi bi-inbox"></i>No expenses in this period.</div></td></tr>
-                  ) : expenses.map((e) => (
+                  ) : pager.pageItems.map((e) => (
                     <tr key={e.id}>
                       <td className="text-secondary text-nowrap">{e.createdAt?.toDate?.().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) || '—'}</td>
                       <td><span className="badge text-bg-light border">{e.category}</span></td>
@@ -140,6 +143,7 @@ export default function Expenses() {
                 </tbody>
               </table>
             </div>
+            <Pagination pager={pager} noun="expenses" />
           </div>
         </div>
       </div>

@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import MyRequests from '../components/MyRequests';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 import { getAllProducts, stockStatus } from '../services/products';
 import { getCategories } from '../services/catalog';
 
@@ -41,6 +43,8 @@ export default function Inventory() {
     if (stockFilter === 'out') list = list.filter((p) => stockStatus(p) === 'out');
     return list;
   }, [products, search, stockFilter]);
+
+  const pager = usePagination(filtered);
 
   function handleFilterChange(value) {
     const params = new URLSearchParams(searchParams);
@@ -104,7 +108,7 @@ export default function Inventory() {
                     </div>
                   </td>
                 </tr>
-              ) : filtered.map((product) => {
+              ) : pager.pageItems.map((product) => {
                 const status = stockStatus(product);
                 const badge = STATUS_BADGE[status];
                 return (
@@ -143,6 +147,7 @@ export default function Inventory() {
             </tbody>
           </table>
         </div>
+        <Pagination pager={pager} noun="products" />
       </div>
     </Layout>
   );

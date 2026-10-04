@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import StatCard from '../components/StatCard';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 import { useAuth } from '../context/AuthContext';
 import { getCustomers, addCustomer, getCustomerSales } from '../services/customers';
 
 function History({ customer }) {
   const [sales, setSales] = useState(null);
+  const pager = usePagination(sales || [], 10);
 
   useEffect(() => {
     getCustomerSales(customer.id).then(setSales);
@@ -31,7 +34,7 @@ function History({ customer }) {
             <tbody>
               {sales.length === 0 ? (
                 <tr><td colSpan={4}><div className="empty-state"><i className="bi bi-inbox"></i>No purchases yet.</div></td></tr>
-              ) : sales.map((s) => (
+              ) : pager.pageItems.map((s) => (
                 <tr key={s.id}>
                   <td className="text-secondary text-nowrap">{s.createdAt?.toDate?.().toLocaleString() || '—'}</td>
                   <td><Link to={`/pos/receipt/${s.id}`} className="font-monospace small fw-semibold">{s.transactionNo}</Link>{s.status === 'voided' && <span className="badge text-bg-danger ms-2">voided</span>}</td>
@@ -42,6 +45,7 @@ function History({ customer }) {
             </tbody>
           </table>
         </div>
+        <Pagination pager={pager} noun="purchases" />
       </div>
     </>
   );
@@ -67,6 +71,7 @@ export default function Customers() {
     () => customers.filter((c) => !q || c.nameLower?.includes(q) || (c.phone || '').includes(q)),
     [customers, q],
   );
+  const listPager = usePagination(visible, 10);
 
   async function handleAdd(e) {
     e.preventDefault();
@@ -99,13 +104,14 @@ export default function Customers() {
               <div className="text-center py-4"><div className="spinner-border text-primary" /></div>
             ) : visible.length === 0 ? (
               <div className="list-group-item text-secondary text-center">No customers yet.</div>
-            ) : visible.map((c) => (
+            ) : listPager.pageItems.map((c) => (
               <button key={c.id} className={`list-group-item list-group-item-action ${selected?.id === c.id ? 'active' : ''}`} onClick={() => setSelected(c)}>
                 <div className="fw-semibold">{c.name}</div>
                 {c.phone && <div className="small opacity-75">{c.phone}</div>}
               </button>
             ))}
           </div>
+          <div className="card mt-2"><Pagination pager={listPager} noun="customers" /></div>
         </div>
         <div className="col-lg-8">
           {selected ? (
