@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
   const canWork = profile?.isActive === true;
   useEffect(() => {
     if (!isFirebaseConfigured || !canWork) return;
-    const unsubs = ['products', 'categories', 'units', 'suppliers'].map(
+    const unsubs = ['products', 'categories', 'units', 'suppliers', 'customers'].map(
       (name) => onSnapshot(collection(db, name), () => {}, () => {}),
     );
     return () => unsubs.forEach((u) => u());

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getMyRequests } from '../services/requests';
 
-const BADGE = { pending: 'text-bg-warning', approved: 'text-bg-success', rejected: 'text-bg-danger' };
+const BADGE = { pending: 'text-bg-warning', approved: 'text-bg-success', used: 'text-bg-secondary', rejected: 'text-bg-danger' };
 
 /** A cashier's own inventory requests and where each one stands. */
 export default function MyRequests({ userId }) {
@@ -22,7 +22,7 @@ export default function MyRequests({ userId }) {
         {requests.slice(0, 8).map((r) => (
           <li key={r.id} className="list-group-item d-flex justify-content-between align-items-center gap-2">
             <span>
-              {r.kind === 'product' ? `New product: ${r.payload.name}` : `Stock in (${r.payload.items.length} item${r.payload.items.length === 1 ? '' : 's'})`}
+              {r.kind === 'product' ? `New product: ${r.payload.name}` : r.kind === 'discount' ? `Discount ₱${r.payload.amount.toFixed(2)}` : r.kind === 'refund' ? `Refund ₱${r.payload.amount.toFixed(2)} on ${r.payload.transactionNo}` : `Stock in (${r.payload.items.length} item${r.payload.items.length === 1 ? '' : 's'})`}
               {r.status === 'rejected' && r.reviewNote && <span className="text-secondary small"> — {r.reviewNote}</span>}
             </span>
             <span className={`badge ${BADGE[r.status]}`}>{r.status === 'pending' ? 'waiting for owner' : r.status}</span>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import PageSkeleton from '../components/PageSkeleton';
 import Layout from '../components/Layout';
 import { updateUserProfile, sendStaffPasswordReset } from '../services/users';
 
@@ -37,7 +38,7 @@ export default function UserEdit() {
   }
 
   if (!form) {
-    return <Layout><div className="text-center py-5"><div className="spinner-border text-primary" /></div></Layout>;
+    return <Layout><PageSkeleton /></Layout>;
   }
 
   return (

@@ -89,8 +89,14 @@ service cloud.firestore {
     match /sales/{saleId} {
       allow read: if isActive();
       // Cashiers can't discount: only Owner/Admin may record a sale with a discount.
+      // A cashier's discount needs an approved request (same amount, theirs) from an Owner/Admin.
       allow create: if isActive() && request.resource.data.cashierId == request.auth.uid
-        && (request.resource.data.get('discount', 0) == 0 || isOwnerOrAdmin());
+        && (request.resource.data.get('discount', 0) == 0 || isOwnerOrAdmin()
+            || (exists(/databases/$(database)/documents/inventoryRequests/$(request.resource.data.get('discountRequestId', 'none')))
+                && get(/databases/$(database)/documents/inventoryRequests/$(request.resource.data.get('discountRequestId', 'none'))).data.kind == 'discount'
+                && get(/databases/$(database)/documents/inventoryRequests/$(request.resource.data.get('discountRequestId', 'none'))).data.status == 'approved'
+                && get(/databases/$(database)/documents/inventoryRequests/$(request.resource.data.get('discountRequestId', 'none'))).data.requestedBy == request.auth.uid
+                && get(/databases/$(database)/documents/inventoryRequests/$(request.resource.data.get('discountRequestId', 'none'))).data.payload.amount == request.resource.data.discount));
 
       allow update: if isActive()
         && resource.data.status == 'completed'
@@ -115,11 +121,28 @@ service cloud.firestore {
       }
     }
 
+    // Customers: any active staff can add (at the POS); only Owner/Admin can edit. History is
+    // read from the sales ledger, so nothing about a customer's purchases lives here.
+    match /customers/{id} {
+      allow read: if isActive();
+      allow create: if isActive();
+      allow update: if isOwnerOrAdmin();
+      allow delete: if false;
+    }
+
     // Cashiers can log expenses and see only their own; deleting is Owner/Admin only.
     match /expenses/{id} {
       allow read: if isOwnerOrAdmin() || (isActive() && resource.data.recordedBy == request.auth.uid);
       allow create: if isActive() && request.resource.data.recordedBy == request.auth.uid;
       allow update, delete: if isOwnerOrAdmin();
+    }
+
+    // Partial refunds are written only by an Owner/Admin (directly, or when approving a
+    // cashier's refund request) together with the stock restore.
+    match /refunds/{id} {
+      allow read: if isOwnerOrAdmin();
+      allow create: if isOwnerOrAdmin();
+      allow update, delete: if false;
     }
 
     // Cashier-proposed products / stock-ins. Nothing reaches the real inventory until an
@@ -131,6 +154,11 @@ service cloud.firestore {
       allow update: if isOwnerOrAdmin()
         && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNote']);
+      // The requesting cashier may flip their own approved discount to 'used' when the sale is rung.
+      allow update: if isActive() && resource.data.requestedBy == request.auth.uid
+        && resource.data.kind == 'discount' && resource.data.status == 'approved'
+        && request.resource.data.status == 'used'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
       allow delete: if false;
     }
 

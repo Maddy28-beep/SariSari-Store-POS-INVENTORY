@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
+import PageSkeleton from '../components/PageSkeleton';
 import Layout from '../components/Layout';
 import BarcodeImage from '../components/BarcodeImage';
 import { getProduct } from '../services/products';
@@ -15,7 +16,7 @@ export default function ProductLabel() {
   }, [productId]);
 
   if (!product) {
-    return <Layout><div className="text-center py-5"><div className="spinner-border text-primary" /></div></Layout>;
+    return <Layout><PageSkeleton /></Layout>;
   }
 
   if (!product.barcode) {

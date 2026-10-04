@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import PageSkeleton from '../components/PageSkeleton';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getPendingRequests, approveRequest, rejectRequest } from '../services/requests';
@@ -15,6 +16,26 @@ function RequestDetails({ req }) {
           Cost ₱{p.costPrice.toFixed(2)} · Sell ₱{p.sellingPrice.toFixed(2)}
           {p.unitAbbreviation ? ` · per ${p.unitAbbreviation}` : ''} · Initial stock {p.initialStock}
         </div>
+      </div>
+    );
+  }
+  if (req.kind === 'discount') {
+    return (
+      <div>
+        <div className="fw-semibold">Discount ₱{p.amount.toFixed(2)} on a ₱{p.subtotal.toFixed(2)} sale</div>
+        {p.reason && <div className="small text-secondary">Reason: {p.reason}</div>}
+        <div className="small text-secondary">The customer is waiting at the counter.</div>
+      </div>
+    );
+  }
+  if (req.kind === 'refund') {
+    return (
+      <div>
+        <div className="fw-semibold">Refund ₱{p.amount.toFixed(2)} on {p.transactionNo}</div>
+        <ul className="text-secondary small mb-0 ps-3">
+          {p.lines.map((l) => <li key={l.productId}>{l.productName} x{l.quantity}</li>)}
+        </ul>
+        <div className="small text-secondary">Reason: {p.reason}</div>
       </div>
     );
   }
@@ -43,7 +64,12 @@ export default function Approvals() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  // Discount requests have a customer waiting, so keep the list fresh.
+  useEffect(() => {
+    load();
+    const timer = setInterval(load, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   async function run(req, action) {
     setError('');
@@ -71,7 +97,7 @@ export default function Approvals() {
       {error && <div className="alert alert-danger py-2">{error}</div>}
 
       {loading ? (
-        <div className="text-center py-5"><div className="spinner-border text-primary" /></div>
+        <PageSkeleton />
       ) : requests.length === 0 ? (
         <div className="card"><div className="empty-state"><i className="bi bi-inbox"></i>Nothing waiting for approval.</div></div>
       ) : (

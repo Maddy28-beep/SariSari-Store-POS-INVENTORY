@@ -17,6 +17,7 @@ import Settings from './pages/Settings';
 import VoidRequests from './pages/VoidRequests';
 import Expenses from './pages/Expenses';
 import Approvals from './pages/Approvals';
+import Customers from './pages/Customers';
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
       <Route path="/inventory/new" element={<ProtectedRoute><ProductCreate /></ProtectedRoute>} />
+      <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
       <Route path="/approvals" element={<ProtectedRoute roles={['owner', 'admin']}><Approvals /></ProtectedRoute>} />
       <Route path="/inventory/:productId/edit" element={<ProtectedRoute roles={['owner', 'admin']}><ProductEdit /></ProtectedRoute>} />
       <Route path="/inventory/:productId/label" element={<ProtectedRoute roles={['owner', 'admin']}><ProductLabel /></ProtectedRoute>} />

@@ -3,9 +3,15 @@ import { db } from '../firebase/config';
 import { getDocsSafe } from '../firebase/offline';
 import { getAllProducts, stockStatus } from './products';
 
+/** period: 'daily' | 'weekly' | 'monthly', or { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' } for any dates. */
 export function rangeFor(period) {
   const now = new Date();
   let start;
+  if (period && typeof period === 'object') {
+    const from = new Date(`${period.from}T00:00:00`);
+    const to = new Date(`${period.to || period.from}T23:59:59.999`);
+    return { start: Timestamp.fromDate(from), end: Timestamp.fromDate(to), bounded: true };
+  }
   if (period === 'weekly') {
     start = new Date(now);
     start.setDate(now.getDate() - now.getDay());
@@ -15,25 +21,42 @@ export function rangeFor(period) {
   } else {
     start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
-  return { start: Timestamp.fromDate(start), end: Timestamp.fromDate(now) };
+  return { start: Timestamp.fromDate(start), end: Timestamp.fromDate(now), bounded: false };
 }
 
 /** cashierId limits the result to one cashier's own sales (used for the cashier role). */
 export async function getSalesInRange(period, cashierId = null) {
-  const { start } = rangeFor(period);
+  const { start, end, bounded } = rangeFor(period);
   const q = query(
     collection(db, 'sales'),
     where('status', '==', 'completed'),
     where('createdAt', '>=', start),
+    ...(bounded ? [where('createdAt', '<=', end)] : []),
   );
   const snap = await getDocsSafe(q);
   const sales = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   return cashierId ? sales.filter((s) => s.cashierId === cashierId) : sales;
 }
 
+/** Approved partial refunds in the period (Owner/Admin only). */
+export async function getRefundsInRange(period) {
+  const { start, end, bounded } = rangeFor(period);
+  const q = query(
+    collection(db, 'refunds'),
+    where('createdAt', '>=', start),
+    ...(bounded ? [where('createdAt', '<=', end)] : []),
+  );
+  const snap = await getDocsSafe(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 export async function getSaleItemsInRange(period) {
-  const { start } = rangeFor(period);
-  const q = query(collectionGroup(db, 'items'), where('createdAt', '>=', start));
+  const { start, end, bounded } = rangeFor(period);
+  const q = query(
+    collectionGroup(db, 'items'),
+    where('createdAt', '>=', start),
+    ...(bounded ? [where('createdAt', '<=', end)] : []),
+  );
   const snap = await getDocsSafe(q);
 
   return snap.docs.map((d) => ({ id: d.id, saleId: d.ref.parent.parent.id, ...d.data() }));

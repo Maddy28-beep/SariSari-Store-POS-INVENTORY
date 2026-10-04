@@ -69,6 +69,7 @@ export default function Layout({ children, header }) {
           <SidebarLink to="/pos" icon="bi-cart3">POS</SidebarLink>
           <SidebarLink to="/inventory" icon="bi-box-seam-fill">Inventory</SidebarLink>
           <SidebarLink to="/stock-in" icon="bi-box-arrow-in-down">Stock In</SidebarLink>
+          <SidebarLink to="/customers" icon="bi-people">Customers</SidebarLink>
           <SidebarLink to="/reports" icon="bi-graph-up-arrow">Reports</SidebarLink>
           <SidebarLink to="/expenses" icon="bi-wallet2">Expenses</SidebarLink>
           {isOwnerOrAdmin && <SidebarLink to="/approvals" icon="bi-clipboard-check" badge={pendingRequestCount}>Approvals</SidebarLink>}

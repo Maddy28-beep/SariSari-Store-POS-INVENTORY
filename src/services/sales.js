@@ -32,7 +32,7 @@ async function generateTransactionNo() {
  * Validates stock, deducts inventory, and records the sale atomically.
  */
 export async function checkout({
-  items, discount = 0, paymentMethod, amountTendered, paymentReference, gcashAmount, cashierId,
+  items, discount = 0, paymentMethod, amountTendered, paymentReference, gcashAmount, cashierId, customer = null, discountRequestId = null,
 }) {
   if (!items?.length) throw new Error('Cart is empty.');
 
@@ -109,8 +109,11 @@ export async function checkout({
     tx.set(saleRef, {
       transactionNo,
       cashierId,
+      customerId: customer?.id || null,
+      customerName: customer?.name || null,
       subtotal,
       discount,
+      discountRequestId: discountRequestId || null,
       total,
       paymentMethod,
       payments,
@@ -121,6 +124,9 @@ export async function checkout({
       voidStatus: null,
       createdAt: serverTimestamp(),
     });
+
+    // A cashier's approved discount is good for one sale only.
+    if (discountRequestId) tx.update(doc(db, 'inventoryRequests', discountRequestId), { status: 'used' });
 
     lines.forEach((line) => {
       const itemRef = doc(collection(db, 'sales', saleRef.id, 'items'));

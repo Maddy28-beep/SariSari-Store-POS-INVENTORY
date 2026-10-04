@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import PageSkeleton from '../components/PageSkeleton';
 import Layout from '../components/Layout';
 import StatCard from '../components/StatCard';
 import { useAuth } from '../context/AuthContext';
 import { getExpensesInRange, summarizeExpenses } from '../services/expenses';
-import { getSalesInRange, getSaleItemsInRange, getStockReport } from '../services/reports';
+import { getRefundsInRange, getSalesInRange, getSaleItemsInRange, getStockReport } from '../services/reports';
 import { getRecentSales } from '../services/sales';
 import { getAllUsers } from '../services/users';
 
@@ -19,13 +20,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     (async () => {
-      const [sales, items, stock, recent, users, expenses] = await Promise.all([
+      const [sales, items, stock, recent, users, expenses, refunds] = await Promise.all([
         getSalesInRange('daily', ownOnly),
         getSaleItemsInRange('daily'),
         getStockReport(),
         getRecentSales(8, ownOnly),
         getAllUsers(),
         isOwnerOrAdmin ? getExpensesInRange('daily') : Promise.resolve([]),
+        isOwnerOrAdmin ? getRefundsInRange('daily') : Promise.resolve([]),
       ]);
 
       const salesTotal = sales.reduce((sum, s) => sum + s.total, 0);
@@ -37,7 +39,7 @@ export default function Dashboard() {
       setUsersById(Object.fromEntries(users.map((u) => [u.id, u.name])));
       setStats({
         salesTotal,
-        expensesTotal: summarizeExpenses(expenses).total,
+        expensesTotal: summarizeExpenses(expenses).total + refunds.reduce((sum, r) => sum + r.amount, 0),
         transactionCount: sales.length,
         itemsSold,
         lowStockCount: stock.lowStock.length,
@@ -56,7 +58,7 @@ export default function Dashboard() {
       </>
     }>
       {loading || !stats ? (
-        <div className="text-center py-5"><div className="spinner-border text-primary" /></div>
+        <PageSkeleton />
       ) : (
         <>
           <div className="row g-3 mb-3">
@@ -77,7 +79,7 @@ export default function Dashboard() {
                 <StatCard
                   icon="bi-wallet2"
                   variant="warning"
-                  label="Today's Expenses"
+                  label="Today's Expenses & Refunds"
                   value={`₱${stats.expensesTotal.toFixed(2)}`}
                   action={<Link to="/expenses" className="btn btn-sm btn-outline-warning">Add</Link>}
                 />
@@ -86,7 +88,7 @@ export default function Dashboard() {
                 <StatCard
                   icon="bi-piggy-bank"
                   variant={stats.salesTotal - stats.expensesTotal < 0 ? 'danger' : undefined}
-                  label="Today's Net (Sales − Expenses)"
+                  label="Today's Net"
                   value={`₱${(stats.salesTotal - stats.expensesTotal).toFixed(2)}`}
                 />
               </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
+import PageSkeleton from '../components/PageSkeleton';
 import Layout from '../components/Layout';
 import BarcodeImage from '../components/BarcodeImage';
 import { useAuth } from '../context/AuthContext';
@@ -94,7 +95,7 @@ export default function ProductEdit() {
   }
 
   if (!form) {
-    return <Layout><div className="text-center py-5"><div className="spinner-border text-primary" /></div></Layout>;
+    return <Layout><PageSkeleton /></Layout>;
   }
 
   return (

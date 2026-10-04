@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import CustomerPicker from '../components/CustomerPicker';
+import DiscountControl from '../components/DiscountControl';
 import { useAuth } from '../context/AuthContext';
 import { lookupByBarcode, getAllProducts } from '../services/products';
 import { getCategories } from '../services/catalog';
@@ -22,6 +24,8 @@ export default function Pos() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [cart, setCart] = useState([]);
   const [discount, setDiscount] = useState(0);
+  const [customer, setCustomer] = useState(null);
+  const [discountRequestId, setDiscountRequestId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountTendered, setAmountTendered] = useState('');
   const [paymentReference, setPaymentReference] = useState('');
@@ -150,6 +154,8 @@ export default function Pos() {
         paymentReference: paymentReference || null,
         gcashAmount: paymentMethod === 'split' ? gcashPortion : undefined,
         cashierId: profile.id,
+        customer,
+        discountRequestId: isOwnerOrAdmin ? null : discountRequestId,
       });
       navigate(`/pos/receipt/${saleId}`);
     } catch (err) {
@@ -222,7 +228,7 @@ export default function Pos() {
                   <div className="col-6 col-md-4 col-xl-3" key={p.id}>
                     <button
                       type="button" disabled={p.currentStock <= 0}
-                      className="btn btn-outline-secondary w-100 h-100 text-start d-flex flex-column justify-content-between p-2"
+                      className="btn pos-tile w-100 h-100 text-start d-flex flex-column justify-content-between"
                       onClick={() => addProduct(p)}
                     >
                       <span className="small fw-semibold text-body">{p.name}</span>
@@ -294,12 +300,15 @@ export default function Pos() {
                 <span>Subtotal</span>
                 <span>₱{subtotal.toFixed(2)}</span>
               </div>
-              {isOwnerOrAdmin && (
-                <div className="mb-3">
-                  <label className="form-label small fw-semibold">Discount (₱)</label>
-                  <input type="number" className="form-control" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} />
-                </div>
-              )}
+              <CustomerPicker value={customer} onChange={setCustomer} userId={profile.id} />
+              <DiscountControl
+                isOwnerOrAdmin={isOwnerOrAdmin}
+                subtotal={subtotal}
+                discount={discount}
+                onDiscountChange={setDiscount}
+                onApprovalChange={setDiscountRequestId}
+                userId={profile.id}
+              />
               <hr />
               <div className="d-flex justify-content-between fs-4 fw-bold mb-3">
                 <span>TOTAL</span>

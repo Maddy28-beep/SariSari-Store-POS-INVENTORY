@@ -28,17 +28,20 @@ export async function deleteExpense(id) {
 
 /** recordedBy limits the result to one person's own entries (the cashier role). */
 export async function getExpensesInRange(period, recordedBy = null) {
-  const { start } = rangeFor(period);
+  const { start, end, bounded } = rangeFor(period);
   const q = recordedBy
     // Equality-only query (no index needed); the date filter is applied below.
     ? query(collection(db, 'expenses'), where('recordedBy', '==', recordedBy))
-    : query(collection(db, 'expenses'), where('createdAt', '>=', start), orderBy('createdAt', 'desc'));
+    : query(collection(db, 'expenses'), where('createdAt', '>=', start), ...(bounded ? [where('createdAt', '<=', end)] : []), orderBy('createdAt', 'desc'));
   const snap = await getDocsSafe(q);
   const list = snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
   if (!recordedBy) return list;
   const startMs = start.toMillis();
   return list
-    .filter((e) => (e.createdAt?.toMillis?.() ?? Date.now()) >= startMs)
+    .filter((e) => {
+      const ms = e.createdAt?.toMillis?.() ?? Date.now();
+      return ms >= startMs && (!bounded || ms <= end.toMillis());
+    })
     .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 }
 

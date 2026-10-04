@@ -84,8 +84,8 @@ export default function Inventory() {
             <thead>
               <tr>
                 <th>Product</th>
-                <th>Barcode</th>
-                <th>Category</th>
+                <th className="col-hide-sm">Barcode</th>
+                <th className="col-hide-sm">Category</th>
                 <th className="text-end">Price</th>
                 <th className="text-end">Stock</th>
                 <th>Status</th>
@@ -109,14 +109,17 @@ export default function Inventory() {
                 const badge = STATUS_BADGE[status];
                 return (
                   <tr key={product.id}>
-                    <td className="fw-semibold">{product.name}</td>
-                    <td className="font-monospace small text-secondary">{product.barcode || '—'}</td>
-                    <td>{categories[product.categoryId] || '—'}</td>
+                    <td className="fw-semibold">
+                      {product.name}
+                      <div className="d-md-none small text-secondary fw-normal">{categories[product.categoryId] || 'No category'}</div>
+                    </td>
+                    <td className="font-monospace small text-secondary col-hide-sm">{product.barcode || '—'}</td>
+                    <td className="col-hide-sm">{categories[product.categoryId] || '—'}</td>
                     <td className="text-end">₱{product.sellingPrice.toFixed(2)}</td>
                     <td className="text-end">{product.currentStock} {product.unit}</td>
                     <td>
                       <span className={`badge ${badge.text} d-inline-flex align-items-center gap-1`}>
-                        <i className={`bi ${badge.icon}`}></i> {badge.label}
+                        <i className={`bi ${badge.icon}`}></i> <span className="d-none d-sm-inline">{badge.label}</span>
                       </span>
                       {product.status === 'inactive' && <span className="badge text-bg-secondary ms-1">Inactive</span>}
                     </td>
@@ -124,7 +127,7 @@ export default function Inventory() {
                       <td>
                         <div className="d-flex gap-1">
                           <Link to={`/inventory/${product.id}/edit`} className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
-                            <i className="bi bi-pencil"></i> Edit
+                            <i className="bi bi-pencil"></i> <span className="d-none d-md-inline">Edit</span>
                           </Link>
                           {product.barcode && (
                             <Link to={`/inventory/${product.id}/label`} className="btn btn-sm btn-outline-secondary" title="Print barcode label">
