@@ -5,7 +5,6 @@ import CustomerPicker from '../components/CustomerPicker';
 import DiscountControl from '../components/DiscountControl';
 import { useAuth } from '../context/AuthContext';
 import { lookupByBarcode, getAllProducts } from '../services/products';
-import { getCategories } from '../services/catalog';
 import { checkout } from '../services/sales';
 
 function stepFor(p) {
@@ -20,8 +19,6 @@ export default function Pos() {
   const [barcodeInput, setBarcodeInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [activeCategory, setActiveCategory] = useState('all');
   const [cart, setCart] = useState([]);
   const [discount, setDiscount] = useState(0);
   const [customer, setCustomer] = useState(null);
@@ -42,17 +39,18 @@ export default function Pos() {
   }, []);
 
   useEffect(() => {
-    Promise.all([getAllProducts(), getCategories()]).then(([p, c]) => {
-      setProducts(p.filter((x) => x.status === 'active'));
-      setCategories(c);
-    });
+    getAllProducts().then((p) => setProducts(p.filter((x) => x.status === 'active')));
   }, []);
 
   const q = searchQuery.trim().toLowerCase();
-  const visibleProducts = products.filter((p) =>
-    (activeCategory === 'all' || p.categoryId === activeCategory) &&
-    (!q || p.name.toLowerCase().includes(q)),
-  );
+  // Quick results under the search box (replaces the old product-tile grid).
+  const searchResults = q ? products.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 8) : [];
+
+  function pickResult(p) {
+    addProduct(p);
+    setSearchQuery('');
+    barcodeRef.current?.focus();
+  }
 
   const subtotal = cart.reduce((sum, i) => sum + i.sellingPrice * i.quantity, 0);
   const total = Math.max(0, subtotal - (Number(discount) || 0));
@@ -206,44 +204,65 @@ export default function Pos() {
                   <i className="bi bi-exclamation-circle"></i> {scanError}
                 </div>
               )}
+              {q && (
+                <div className="search-results mt-3">
+                  {searchResults.length === 0 ? (
+                    <div className="text-secondary small p-2">No product matches “{searchQuery}”.</div>
+                  ) : searchResults.map((p) => (
+                    <button key={p.id} type="button" className="search-result" disabled={p.currentStock <= 0} onClick={() => pickResult(p)}>
+                      <span className="fw-semibold">{p.name}</span>
+                      <span className="d-flex align-items-center gap-3">
+                        <span className={`small ${p.currentStock <= 0 ? 'text-danger' : 'text-secondary'}`}>{p.currentStock <= 0 ? 'Out' : `${p.currentStock} ${p.unit}`}</span>
+                        <span className="fw-bold text-primary">₱{p.sellingPrice.toFixed(2)}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="card mb-3">
-            <div className="card-body">
-              <div className="d-flex gap-2 flex-wrap mb-3">
-                {[{ id: 'all', name: 'All' }, ...categories].map((c) => (
-                  <button
-                    key={c.id} type="button"
-                    className={`btn btn-sm rounded-pill ${activeCategory === c.id ? 'btn-primary' : 'btn-outline-secondary'}`}
-                    onClick={() => setActiveCategory(c.id)}
-                  >
-                    {c.name}
-                  </button>
-                ))}
+          <div className="card order-main">
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <span className="d-flex align-items-center gap-2"><i className="bi bi-bag-check text-primary"></i> Items bought</span>
+              <span className="badge text-bg-secondary">{cart.length} {cart.length === 1 ? 'item' : 'items'}</span>
+            </div>
+            {cart.length === 0 ? (
+              <div className="empty-state">
+                <i className="bi bi-upc-scan"></i>
+                Scan a barcode or search a product to start the order.
               </div>
-              <div className="row g-2" style={{ maxHeight: 340, overflowY: 'auto' }}>
-                {visibleProducts.length === 0 ? (
-                  <div className="empty-state"><i className="bi bi-box-seam"></i>No products found.</div>
-                ) : visibleProducts.map((p) => (
-                  <div className="col-6 col-md-4 col-xl-3" key={p.id}>
-                    <button
-                      type="button" disabled={p.currentStock <= 0}
-                      className="btn pos-tile w-100 h-100 text-start d-flex flex-column justify-content-between"
-                      onClick={() => addProduct(p)}
-                    >
-                      <span className="small fw-semibold text-body">{p.name}</span>
-                      <span className="d-flex justify-content-between align-items-center mt-1">
-                        <span className="fw-bold text-primary">₱{p.sellingPrice.toFixed(2)}</span>
-                        <span className={`small ${p.currentStock <= 0 ? 'text-danger' : 'text-secondary'}`}>
-                          {p.currentStock <= 0 ? 'Out' : `${p.currentStock} ${p.unit}`}
-                        </span>
-                      </span>
-                    </button>
+            ) : (
+              <div className="order-big">
+                <div className="order-big-head">
+                  <span>Product</span><span className="text-center">Qty</span><span className="text-end">Price</span><span className="text-end">Total</span><span></span>
+                </div>
+                {cart.map((item, index) => (
+                  <div key={item.productId} className="order-big-row">
+                    <div className="order-big-name">
+                      <div className="fw-semibold">{item.name}</div>
+                      <div className="ob-unit-sub text-secondary small">₱{item.sellingPrice.toFixed(2)}{item.unit ? ` / ${item.unit}` : ''}</div>
+                    </div>
+                    <div className="input-group order-stepper">
+                      <button type="button" className="btn btn-outline-secondary" aria-label="Less" onClick={() => updateQty(index, -1)}><i className="bi bi-dash-lg"></i></button>
+                      <input
+                        type="number" className="form-control text-center fw-semibold"
+                        step={stepFor(item)}
+                        value={item.quantity}
+                        onChange={(e) => setQty(index, e.target.value)}
+                      />
+                      <button type="button" className="btn btn-outline-secondary" aria-label="More" onClick={() => updateQty(index, 1)}><i className="bi bi-plus-lg"></i></button>
+                    </div>
+                    <div className="ob-price text-end">₱{item.sellingPrice.toFixed(2)}{item.unit ? <span className="text-secondary small"> / {item.unit}</span> : null}</div>
+                    <div className="text-end order-big-total">₱{(item.sellingPrice * item.quantity).toFixed(2)}</div>
+                    <button type="button" className="btn btn-link text-danger order-big-remove" aria-label="Remove item" onClick={() => removeItem(index)}><i className="bi bi-trash3"></i></button>
                   </div>
                 ))}
+                <div className="order-big-sum">
+                  <span>Subtotal</span><strong>₱{subtotal.toFixed(2)}</strong>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -251,41 +270,11 @@ export default function Pos() {
           <div className={`order-panel ${orderOpen ? 'open' : ''}`}>
           <div className="card order-card">
             <div className="card-header d-flex justify-content-between align-items-center">
-              <span>Current Order</span>
+              <span>Payment</span>
               <span className="d-flex align-items-center gap-2">
-                <span className="badge text-bg-secondary">{cart.length} {cart.length === 1 ? 'item' : 'items'}</span>
+                <span className="fw-bold text-primary d-lg-none">₱{total.toFixed(2)}</span>
                 <button type="button" className="btn-close d-lg-none" aria-label="Hide order" onClick={() => setOrderOpen(false)}></button>
               </span>
-            </div>
-
-            <div className="order-lines">
-              {cart.length === 0 ? (
-                <div className="empty-state py-4">
-                  <i className="bi bi-upc-scan"></i>
-                  Scan a barcode or tap a product to begin.
-                </div>
-              ) : cart.map((item, index) => (
-                <div key={item.productId} className="order-line">
-                  <div className="d-flex justify-content-between align-items-start gap-2">
-                    <span className="fw-semibold">{item.name}</span>
-                    <span className="fw-bold text-nowrap">₱{(item.sellingPrice * item.quantity).toFixed(2)}</span>
-                  </div>
-                  <div className="text-secondary small mb-2">₱{item.sellingPrice.toFixed(2)}{item.unit ? ` / ${item.unit}` : ''}</div>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div className="input-group input-group-sm order-stepper">
-                      <button type="button" className="btn btn-outline-secondary" aria-label="Less" onClick={() => updateQty(index, -1)}><i className="bi bi-dash"></i></button>
-                      <input
-                        type="number" className="form-control text-center"
-                        step={stepFor(item)}
-                        value={item.quantity}
-                        onChange={(e) => setQty(index, e.target.value)}
-                      />
-                      <button type="button" className="btn btn-outline-secondary" aria-label="More" onClick={() => updateQty(index, 1)}><i className="bi bi-plus"></i></button>
-                    </div>
-                    <button type="button" className="btn btn-sm btn-link text-danger" aria-label="Remove item" onClick={() => removeItem(index)}><i className="bi bi-trash3"></i></button>
-                  </div>
-                </div>
-              ))}
             </div>
 
             <div className="card-body order-body">
@@ -393,7 +382,7 @@ export default function Pos() {
 
       {/* Phones & tablets: the order lives in a slide-up sheet, opened from this bar */}
       <button type="button" className="order-bar d-lg-none d-print-none" onClick={() => setOrderOpen(true)}>
-        <span className="d-flex align-items-center gap-2"><i className="bi bi-bag-check-fill"></i> Show order</span>
+        <span className="d-flex align-items-center gap-2"><i className="bi bi-credit-card-2-front-fill"></i> Pay now</span>
         <span className="order-bar-count">{cart.length} {cart.length === 1 ? 'item' : 'items'}</span>
         <strong>₱{total.toFixed(2)}</strong>
       </button>

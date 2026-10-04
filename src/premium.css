@@ -547,3 +547,54 @@ body {
   body:has(.order-bar) .sync-banner { bottom: 84px; }
   body:has(.order-bar) .app-main { padding-bottom: 6.5rem !important; }
 }
+
+/* ---------- POS: big readable order list + search results ---------- */
+.search-results {
+  border: 1px solid var(--p-line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--p-shadow-card);
+  animation: p-pop 0.14s var(--p-ease);
+}
+.search-result {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.8rem 1rem;
+  background: #fff; border: none; border-bottom: 1px solid var(--p-line);
+  text-align: left; font-size: 1rem;
+  transition: background-color 0.12s;
+}
+.search-result:last-child { border-bottom: none; }
+.search-result:hover:not(:disabled) { background: var(--bs-primary-bg-subtle); }
+.search-result:disabled { opacity: 0.5; }
+
+.order-main .card-header { font-size: 1.05rem; }
+.order-big-head, .order-big-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px 130px 120px 44px;
+  gap: 0.75rem; align-items: center;
+  padding: 0.95rem 1.25rem;
+}
+.order-big-head { padding-top: 0.7rem; padding-bottom: 0.7rem; background: #f8faf9; border-bottom: 1px solid var(--p-line); color: var(--p-text-muted); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.order-big-row { border-bottom: 1px solid var(--p-line); font-size: 1.05rem; animation: p-pop 0.18s var(--p-ease); }
+.order-big-row:hover { background: rgba(13, 122, 99, 0.04); }
+.order-big-total { font-size: 1.2rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.order-big-row .order-stepper { width: 100%; }
+.order-big-row .order-stepper .btn { min-height: 42px; padding: 0 0.7rem; }
+.order-big-row .order-stepper .form-control { min-height: 42px; font-size: 1.05rem; padding: 0; }
+.order-big-sum { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; background: #f4f6f5; font-size: 1.15rem; border-radius: 0 0 16px 16px; }
+.order-big-sum strong { font-size: 1.5rem; letter-spacing: -0.02em; }
+
+.order-main { container-type: inline-size; }
+.ob-unit-sub { display: none; }
+/* Narrow card (phone, or tablet with the payment column beside it): stack each line */
+@container (max-width: 680px) {
+  .order-big-head, .ob-price { display: none; }
+  .ob-unit-sub { display: block; }
+  .order-big-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name total' 'qty remove'; row-gap: 0.6rem; padding: 0.9rem 1rem; }
+  .order-big-name { grid-area: name; }
+  .order-big-total { grid-area: total; }
+  .order-big-row .order-stepper { grid-area: qty; max-width: 170px; }
+  .order-big-remove { grid-area: remove; justify-self: end; }
+}
