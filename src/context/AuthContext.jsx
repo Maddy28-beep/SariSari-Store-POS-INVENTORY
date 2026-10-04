@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from '../firebase/config';
 
 const AuthContext = createContext(null);
@@ -42,6 +42,17 @@ export function AuthProvider({ children }) {
     );
     return unsubProfile;
   }, [user]);
+
+  // Keep a copy of the catalog on this device so the POS keeps working offline.
+  // These listeners also stream live updates while online.
+  const canWork = profile?.isActive === true;
+  useEffect(() => {
+    if (!isFirebaseConfigured || !canWork) return;
+    const unsubs = ['products', 'categories', 'units', 'suppliers'].map(
+      (name) => onSnapshot(collection(db, name), () => {}, () => {}),
+    );
+    return () => unsubs.forEach((u) => u());
+  }, [canWork]);
 
   const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
   const logout = () => signOut(auth);

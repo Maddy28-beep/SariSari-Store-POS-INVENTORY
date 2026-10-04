@@ -1,7 +1,8 @@
 import {
-  collection, doc, addDoc, updateDoc, runTransaction, serverTimestamp, increment,
+  collection, doc, writeBatch, serverTimestamp, increment,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { getDocSafe, commitFast } from '../firebase/offline';
 
 const TYPES = {
   BEGINNING: 'beginning',
@@ -14,38 +15,42 @@ const TYPES = {
 
 export { TYPES as InventoryTypes };
 
-/** Records a stock movement and updates product.currentStock atomically. */
-export async function moveStock(productId, type, signedQuantity, { note = null, referenceId = null, referenceType = null, userId }) {
-  const productRef = doc(db, 'products', productId);
+function stageStockMove(batch, productId, type, signedQuantity, currentStock, { note = null, referenceId = null, referenceType = null, userId, extraProductFields = {} }) {
+  const stockAfter = Math.round((currentStock + signedQuantity) * 1000) / 1000;
 
-  return runTransaction(db, async (tx) => {
-    const productSnap = await tx.get(productRef);
-    if (!productSnap.exists()) throw new Error('Product not found');
-
-    const current = productSnap.data().currentStock || 0;
-    const stockAfter = Math.round((current + signedQuantity) * 1000) / 1000;
-
-    tx.update(productRef, { currentStock: increment(signedQuantity), updatedAt: serverTimestamp() });
-
-    const txRef = doc(collection(db, 'inventoryTransactions'));
-    tx.set(txRef, {
-      productId,
-      type,
-      quantity: signedQuantity,
-      stockAfter,
-      referenceId,
-      referenceType,
-      note,
-      userId,
-      createdAt: serverTimestamp(),
-    });
-
-    return stockAfter;
+  batch.update(doc(db, 'products', productId), {
+    currentStock: increment(signedQuantity),
+    updatedAt: serverTimestamp(),
+    ...extraProductFields,
   });
+  batch.set(doc(collection(db, 'inventoryTransactions')), {
+    productId, type, quantity: signedQuantity, stockAfter, referenceId, referenceType, note, userId,
+    createdAt: serverTimestamp(),
+  });
+  return stockAfter;
+}
+
+async function currentStockOf(productId) {
+  const snap = await getDocSafe(doc(db, 'products', productId));
+  if (!snap.exists()) throw new Error('Product not found');
+  return snap.data().currentStock || 0;
+}
+
+/** Records a stock movement and updates product.currentStock together (works offline). */
+export async function moveStock(productId, type, signedQuantity, opts) {
+  const current = await currentStockOf(productId);
+  const batch = writeBatch(db);
+  const stockAfter = stageStockMove(batch, productId, type, signedQuantity, current, opts);
+  await commitFast(batch);
+  return stockAfter;
 }
 
 export async function stockIn(productId, quantity, costPrice, { supplierId = null, userId }) {
-  const batchRef = await addDoc(collection(db, 'productBatches'), {
+  const current = await currentStockOf(productId);
+  const batch = writeBatch(db);
+
+  const batchRef = doc(collection(db, 'productBatches'));
+  batch.set(batchRef, {
     productId,
     supplierId,
     costPrice: Number(costPrice),
@@ -54,15 +59,15 @@ export async function stockIn(productId, quantity, costPrice, { supplierId = nul
     receivedAt: serverTimestamp(),
   });
 
-  await moveStock(productId, TYPES.STOCK_IN, Math.abs(quantity), {
+  stageStockMove(batch, productId, TYPES.STOCK_IN, Math.abs(quantity), current, {
     note: `Stock in (batch ${batchRef.id})`,
     referenceId: batchRef.id,
     referenceType: 'productBatch',
     userId,
+    extraProductFields: { costPrice: Number(costPrice) },
   });
 
-  await updateDoc(doc(db, 'products', productId), { costPrice: Number(costPrice) });
-
+  await commitFast(batch);
   return batchRef.id;
 }
 

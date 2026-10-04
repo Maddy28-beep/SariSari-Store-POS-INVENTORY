@@ -92,3 +92,12 @@ Either way, once deployed, don't forget the domain needs to be added to Firebase
 ## Notes on the data model
 
 Firestore is NoSQL, so instead of SQL joins the app denormalizes a few fields for read performance (e.g. each product stores its unit abbreviation directly, each sale line item snapshots the product name at time of sale). Stock is never edited directly — every change (sale, stock-in, adjustment) goes through `inventoryTransactions`, giving the same audit trail the original spec asked for, and product stock updates happen inside Firestore transactions so concurrent sales can't oversell.
+
+## Offline mode
+
+The POS keeps working when the internet is down:
+
+- **Data** is cached on the device (Firestore persistent cache). Sales, stock-in, adjustments, product edits and void requests made offline are saved locally and sync automatically when the connection returns. A banner shows when you're offline / syncing.
+- **App itself** is a PWA (service worker), so it opens with no internet after the first online visit. Test it with `npm run build && npx vite preview`, then open the app once online, log in, and go offline. (`npm run dev` has no service worker.)
+- **First login on a device needs internet** (Firebase Auth); after that the session persists offline. Log in and open the POS once online so the product list is cached.
+- Offline-only limits: creating staff accounts needs internet; reports only cover data already on this device; two devices selling the same item while both offline can push stock below zero (fix with a stock adjustment).

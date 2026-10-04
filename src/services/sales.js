@@ -1,9 +1,10 @@
 import {
-  collection, doc, getDoc, runTransaction, serverTimestamp, query, where,
-  orderBy, limit as fbLimit, getDocs, Timestamp, increment,
+  collection, doc, writeBatch, serverTimestamp, query, where,
+  orderBy, limit as fbLimit, Timestamp, increment,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { InventoryTypes } from './inventory';
+import { getDocSafe, getDocsSafe, commitFast } from '../firebase/offline';
 
 async function generateTransactionNo() {
   const today = new Date();
@@ -11,10 +12,14 @@ async function generateTransactionNo() {
   const startOfDay = Timestamp.fromDate(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
 
   const q = query(collection(db, 'sales'), where('createdAt', '>=', startOfDay));
-  const snap = await getDocs(q);
+  const snap = await getDocsSafe(q);
   const seq = String(snap.size + 1).padStart(4, '0');
 
-  return `${ymd}-${seq}`;
+  // Other devices may be offline too, so their counters can't see ours - a short
+  // random tag keeps receipt numbers unique when we can't reach the server.
+  const tag = navigator.onLine ? '' : `-${Math.random().toString(36).slice(2, 4).toUpperCase()}`;
+
+  return `${ymd}-${seq}${tag}`;
 }
 
 /**
@@ -33,9 +38,13 @@ export async function checkout({
 
   const transactionNo = await generateTransactionNo();
 
-  return runTransaction(db, async (tx) => {
+  // Not a Firestore transaction: transactions need a live connection, and the
+  // store must keep selling when the internet is down. A write batch is applied
+  // locally right away and syncs (atomically) once the connection returns.
+  {
+    const tx = writeBatch(db);
     const productRefs = items.map((i) => doc(db, 'products', i.productId));
-    const productSnaps = await Promise.all(productRefs.map((ref) => tx.get(ref)));
+    const productSnaps = await Promise.all(productRefs.map((ref) => getDocSafe(ref)));
 
     let subtotal = 0;
     const lines = [];
@@ -139,24 +148,25 @@ export async function checkout({
       });
     });
 
+    await commitFast(tx);
     return { saleId: saleRef.id, transactionNo };
-  });
+  }
 }
 
 export async function getRecentSales(max = 8) {
   const q = query(collection(db, 'sales'), where('status', '==', 'completed'), orderBy('createdAt', 'desc'), fbLimit(max));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const snap = await getDocsSafe(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
 }
 
 export async function getSaleWithItems(saleId) {
-  const saleSnap = await getDoc(doc(db, 'sales', saleId));
+  const saleSnap = await getDocSafe(doc(db, 'sales', saleId));
   if (!saleSnap.exists()) return null;
 
-  const itemsSnap = await getDocs(collection(db, 'sales', saleId, 'items'));
+  const itemsSnap = await getDocsSafe(collection(db, 'sales', saleId, 'items'));
   return {
     id: saleSnap.id,
-    ...saleSnap.data(),
-    items: itemsSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    ...saleSnap.data({ serverTimestamps: 'estimate' }),
+    items: itemsSnap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) })),
   };
 }

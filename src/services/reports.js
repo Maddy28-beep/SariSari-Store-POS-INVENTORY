@@ -1,5 +1,6 @@
-import { collection, collectionGroup, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { getDocsSafe } from '../firebase/offline';
 import { getAllProducts, stockStatus } from './products';
 
 function rangeFor(period) {
@@ -24,14 +25,14 @@ export async function getSalesInRange(period) {
     where('status', '==', 'completed'),
     where('createdAt', '>=', start),
   );
-  const snap = await getDocs(q);
+  const snap = await getDocsSafe(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 export async function getSaleItemsInRange(period) {
   const { start } = rangeFor(period);
   const q = query(collectionGroup(db, 'items'), where('createdAt', '>=', start));
-  const snap = await getDocs(q);
+  const snap = await getDocsSafe(q);
 
   return snap.docs.map((d) => ({ id: d.id, saleId: d.ref.parent.parent.id, ...d.data() }));
 }

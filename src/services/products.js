@@ -1,8 +1,9 @@
 import {
-  collection, doc, getDoc, getDocs, addDoc, updateDoc, query, where,
+  collection, doc, setDoc, updateDoc, query, where,
   orderBy, limit as fbLimit, serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { getDocSafe, getDocsSafe, settleFast } from '../firebase/offline';
 
 function productsCol() {
   return collection(db, 'products');
@@ -14,7 +15,7 @@ function unitFields(unit) {
 
 export async function lookupByBarcode(barcode) {
   const q = query(productsCol(), where('barcode', '==', barcode), fbLimit(1));
-  const snap = await getDocs(q);
+  const snap = await getDocsSafe(q);
   if (snap.empty) return null;
   return { id: snap.docs[0].id, ...snap.docs[0].data() };
 }
@@ -31,22 +32,23 @@ export async function searchByName(text, max = 15) {
     where('nameLower', '<', rangeEnd),
     fbLimit(max),
   );
-  const snap = await getDocs(q);
+  const snap = await getDocsSafe(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 export async function getAllProducts() {
-  const snap = await getDocs(query(productsCol(), orderBy('name')));
+  const snap = await getDocsSafe(query(productsCol(), orderBy('name')));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 export async function getProduct(id) {
-  const snap = await getDoc(doc(db, 'products', id));
+  const snap = await getDocSafe(doc(db, 'products', id));
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
 export async function createProduct(data, createdBy, unit) {
-  return addDoc(productsCol(), {
+  const ref = doc(productsCol());
+  await settleFast(setDoc(ref, {
     barcode: data.barcode || null,
     name: data.name,
     nameLower: data.name.toLowerCase(),
@@ -62,16 +64,17 @@ export async function createProduct(data, createdBy, unit) {
     createdBy,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  });
+  }));
+  return ref;
 }
 
 export async function updateProduct(id, data, unit) {
-  return updateDoc(doc(db, 'products', id), {
+  return settleFast(updateDoc(doc(db, 'products', id), {
     ...data,
     ...(data.name ? { nameLower: data.name.toLowerCase() } : {}),
     ...unitFields(unit),
     updatedAt: serverTimestamp(),
-  });
+  }));
 }
 
 export function stockStatus(product) {
