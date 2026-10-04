@@ -5,6 +5,8 @@ import StatCard from '../components/StatCard';
 import { useAuth } from '../context/AuthContext';
 import { getSalesInRange, getSaleItemsInRange, summarizeReports, getStockReport } from '../services/reports';
 import { getAllUsers } from '../services/users';
+import { getExpensesInRange, summarizeExpenses } from '../services/expenses';
+import { downloadCsv } from '../utils/csv';
 
 const PERIODS = { daily: 'Today', weekly: 'This Week', monthly: 'This Month' };
 
@@ -14,6 +16,7 @@ export default function Reports() {
   const period = searchParams.get('period') || 'daily';
 
   const [summary, setSummary] = useState(null);
+  const [expenses, setExpenses] = useState([]);
   const [stock, setStock] = useState(null);
   const [usersById, setUsersById] = useState({});
   const [loading, setLoading] = useState(true);
@@ -21,21 +24,67 @@ export default function Reports() {
   useEffect(() => {
     setLoading(true);
     (async () => {
-      const [sales, items, stockReport, users] = await Promise.all([
+      const [sales, items, stockReport, users, expenseList] = await Promise.all([
         getSalesInRange(period),
         getSaleItemsInRange(period),
         getStockReport(),
         getAllUsers(),
+        isOwnerOrAdmin ? getExpensesInRange(period) : Promise.resolve([]),
       ]);
       setUsersById(Object.fromEntries(users.map((u) => [u.id, u.name])));
       setSummary(summarizeReports(sales, items));
+      setExpenses(expenseList);
       setStock(stockReport);
       setLoading(false);
     })();
   }, [period, isOwnerOrAdmin]);
 
+  const expenseSummary = summarizeExpenses(expenses);
+  const net = (summary?.totalSales || 0) - expenseSummary.total;
+
+  function handleDownload() {
+    const peso = (n) => n.toFixed(2);
+    const rows = [
+      ['Sarisari POS Report', PERIODS[period]],
+      ['Generated', new Date().toLocaleString()],
+      [],
+      ['SUMMARY'],
+      ['Total sales', peso(summary.totalSales)],
+      ['Transactions', summary.transactionCount],
+      ...(isOwnerOrAdmin ? [['Total expenses', peso(expenseSummary.total)], ['Net (sales - expenses)', peso(net)]] : []),
+      [],
+      ['PAYMENT METHODS'], ['Method', 'Payments', 'Total'],
+      ...summary.paymentSummary.map((p) => [p.method, p.count, peso(p.total)]),
+      [],
+      ['BEST SELLERS'], ['Product', 'Qty sold', 'Revenue'],
+      ...summary.bestSellers.map((b) => [b.productName, b.qty, peso(b.revenue)]),
+      [],
+      ['CASHIER SALES'], ['Cashier', 'Transactions', 'Total'],
+      ...summary.cashierSummary.map((c) => [usersById[c.cashierId] || '', c.count, peso(c.total)]),
+      ...(isOwnerOrAdmin ? [
+        [],
+        ['EXPENSES BY CATEGORY'], ['Category', 'Amount'],
+        ...expenseSummary.byCategory.map((c) => [c.category, peso(c.amount)]),
+        [],
+        ['EXPENSE DETAILS'], ['Date', 'Category', 'Description', 'Amount'],
+        ...expenses.map((e) => [e.createdAt?.toDate?.().toLocaleString() || '', e.category, e.description, peso(e.amount)]),
+      ] : []),
+    ];
+    downloadCsv(`sarisari-report-${period}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  }
+
   return (
-    <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-graph-up-arrow text-primary"></i> Reports</h2>}>
+    <Layout header={
+      <div className="d-flex justify-content-between align-items-center gap-2">
+        <h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-graph-up-arrow text-primary"></i> Reports</h2>
+        {summary && (
+          <div className="d-flex gap-2 d-print-none">
+            <button className="btn btn-outline-secondary btn-sm" onClick={() => window.print()}><i className="bi bi-printer"></i> Print / PDF</button>
+            <button className="btn btn-primary btn-sm" onClick={handleDownload}><i className="bi bi-download"></i> Download CSV</button>
+          </div>
+        )}
+      </div>
+    }>
       <ul className="nav nav-tabs mb-3">
         {Object.entries(PERIODS).map(([key, label]) => (
           <li className="nav-item" key={key}>
@@ -54,7 +103,7 @@ export default function Reports() {
       ) : (
         <>
           <div className="row g-3 mb-4">
-            <div className={isOwnerOrAdmin ? 'col-md-6' : 'col-12'}>
+            <div className={isOwnerOrAdmin ? 'col-md-3' : 'col-12'}>
               <StatCard
                 icon="bi-cash-stack"
                 label={`Total Sales (${PERIODS[period]})`}
@@ -63,7 +112,17 @@ export default function Reports() {
               />
             </div>
             {isOwnerOrAdmin && (
-              <div className="col-md-6">
+              <>
+                <div className="col-md-3">
+                  <StatCard icon="bi-wallet2" variant="warning" label="Expenses" value={`₱${expenseSummary.total.toFixed(2)}`} sublabel={`${expenses.length} entries`} />
+                </div>
+                <div className="col-md-3">
+                  <StatCard icon="bi-piggy-bank" variant={net < 0 ? 'danger' : undefined} label="Net (Sales − Expenses)" value={`₱${net.toFixed(2)}`} />
+                </div>
+              </>
+            )}
+            {isOwnerOrAdmin && (
+              <div className="col-md-3">
                 <StatCard
                   icon="bi-archive"
                   label="Inventory Valuation"

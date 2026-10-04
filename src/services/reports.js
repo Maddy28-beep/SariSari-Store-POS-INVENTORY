@@ -3,7 +3,7 @@ import { db } from '../firebase/config';
 import { getDocsSafe } from '../firebase/offline';
 import { getAllProducts, stockStatus } from './products';
 
-function rangeFor(period) {
+export function rangeFor(period) {
   const now = new Date();
   let start;
   if (period === 'weekly') {
