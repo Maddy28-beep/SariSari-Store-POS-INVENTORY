@@ -69,14 +69,15 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Cost prices live here, so cashiers can't read them.
     match /productBatches/{id} {
-      allow read: if isActive();
+      allow read: if isOwnerOrAdmin();
       allow create: if isOwnerOrAdmin();
       allow update, delete: if false;
     }
 
     match /inventoryTransactions/{id} {
-      allow read: if isActive();
+      allow read: if isOwnerOrAdmin();
       allow create: if isActive() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if false;
     }
@@ -87,7 +88,9 @@ service cloud.firestore {
     //   2. Only Owner/Admin can approve (marks it voided) or reject a pending request.
     match /sales/{saleId} {
       allow read: if isActive();
-      allow create: if isActive() && request.resource.data.cashierId == request.auth.uid;
+      // Cashiers can't discount: only Owner/Admin may record a sale with a discount.
+      allow create: if isActive() && request.resource.data.cashierId == request.auth.uid
+        && (request.resource.data.get('discount', 0) == 0 || isOwnerOrAdmin());
 
       allow update: if isActive()
         && resource.data.status == 'completed'

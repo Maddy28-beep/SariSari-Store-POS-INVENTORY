@@ -9,7 +9,9 @@ import { getRecentSales } from '../services/sales';
 import { getAllUsers } from '../services/users';
 
 export default function Dashboard() {
-  const { isOwnerOrAdmin } = useAuth();
+  const { isOwnerOrAdmin, profile } = useAuth();
+  // Cashiers only see their own shift, never store-wide totals.
+  const ownOnly = isOwnerOrAdmin ? null : profile?.id;
   const [stats, setStats] = useState(null);
   const [recentSales, setRecentSales] = useState([]);
   const [usersById, setUsersById] = useState({});
@@ -18,10 +20,10 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       const [sales, items, stock, recent, users, expenses] = await Promise.all([
-        getSalesInRange('daily'),
+        getSalesInRange('daily', ownOnly),
         getSaleItemsInRange('daily'),
         getStockReport(),
-        getRecentSales(8),
+        getRecentSales(8, ownOnly),
         getAllUsers(),
         isOwnerOrAdmin ? getExpensesInRange('daily') : Promise.resolve([]),
       ]);
@@ -44,7 +46,7 @@ export default function Dashboard() {
       setRecentSales(recent);
       setLoading(false);
     })();
-  }, [isOwnerOrAdmin]);
+  }, [isOwnerOrAdmin, ownOnly]);
 
   return (
     <Layout header={
@@ -59,10 +61,10 @@ export default function Dashboard() {
         <>
           <div className="row g-3 mb-3">
             <div className="col-md-4">
-              <StatCard icon="bi-cash-stack" label="Today's Sales" value={`₱${stats.salesTotal.toFixed(2)}`} />
+              <StatCard icon="bi-cash-stack" label={isOwnerOrAdmin ? "Today's Sales" : "My Sales Today"} value={`₱${stats.salesTotal.toFixed(2)}`} />
             </div>
             <div className="col-md-4">
-              <StatCard icon="bi-receipt" label="Transactions" value={stats.transactionCount} />
+              <StatCard icon="bi-receipt" label={isOwnerOrAdmin ? "Transactions" : "My Transactions"} value={stats.transactionCount} />
             </div>
             <div className="col-md-4">
               <StatCard icon="bi-bag-check" label="Items Sold" value={stats.itemsSold} />

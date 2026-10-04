@@ -18,7 +18,8 @@ export function rangeFor(period) {
   return { start: Timestamp.fromDate(start), end: Timestamp.fromDate(now) };
 }
 
-export async function getSalesInRange(period) {
+/** cashierId limits the result to one cashier's own sales (used for the cashier role). */
+export async function getSalesInRange(period, cashierId = null) {
   const { start } = rangeFor(period);
   const q = query(
     collection(db, 'sales'),
@@ -26,7 +27,8 @@ export async function getSalesInRange(period) {
     where('createdAt', '>=', start),
   );
   const snap = await getDocsSafe(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const sales = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return cashierId ? sales.filter((s) => s.cashierId === cashierId) : sales;
 }
 
 export async function getSaleItemsInRange(period) {

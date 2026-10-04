@@ -153,10 +153,11 @@ export async function checkout({
   }
 }
 
-export async function getRecentSales(max = 8) {
-  const q = query(collection(db, 'sales'), where('status', '==', 'completed'), orderBy('createdAt', 'desc'), fbLimit(max));
+export async function getRecentSales(max = 8, cashierId = null) {
+  const q = query(collection(db, 'sales'), where('status', '==', 'completed'), orderBy('createdAt', 'desc'), fbLimit(cashierId ? 60 : max));
   const snap = await getDocsSafe(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
+  const sales = snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
+  return cashierId ? sales.filter((s) => s.cashierId === cashierId).slice(0, max) : sales;
 }
 
 export async function getSaleWithItems(saleId) {

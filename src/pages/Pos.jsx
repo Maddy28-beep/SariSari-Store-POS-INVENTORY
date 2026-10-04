@@ -294,10 +294,12 @@ export default function Pos() {
                 <span>Subtotal</span>
                 <span>₱{subtotal.toFixed(2)}</span>
               </div>
-              <div className="mb-3">
-                <label className="form-label small fw-semibold">Discount (₱)</label>
-                <input type="number" className="form-control" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} />
-              </div>
+              {isOwnerOrAdmin && (
+                <div className="mb-3">
+                  <label className="form-label small fw-semibold">Discount (₱)</label>
+                  <input type="number" className="form-control" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} />
+                </div>
+              )}
               <hr />
               <div className="d-flex justify-content-between fs-4 fw-bold mb-3">
                 <span>TOTAL</span>

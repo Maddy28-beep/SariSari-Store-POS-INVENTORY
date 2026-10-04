@@ -26,7 +26,7 @@ export default function App() {
       <Route path="/pos" element={<ProtectedRoute><Pos /></ProtectedRoute>} />
       <Route path="/pos/receipt/:saleId" element={<ProtectedRoute><Receipt /></ProtectedRoute>} />
       <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute roles={['owner', 'admin']}><Reports /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
       <Route path="/inventory/new" element={<ProtectedRoute roles={['owner', 'admin']}><ProductCreate /></ProtectedRoute>} />
