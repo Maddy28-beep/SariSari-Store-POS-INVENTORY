@@ -397,3 +397,53 @@ body {
   .table > :not(caption) > * > * { padding: 0.7rem 0.6rem; }
   .table td.text-end, .table th.text-end { white-space: nowrap; }
 }
+
+/* ---------- Reports: period chips + printable report sheet ---------- */
+.chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.chip {
+  border: 1px solid var(--p-line-strong);
+  background: #f4f6f5;
+  color: #344054;
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.12s;
+}
+.chip:hover { background: #e9edeb; }
+.chip:active { transform: scale(0.97); }
+.chip.active { background: #0f3d2e; border-color: #0f3d2e; color: #fff; box-shadow: 0 6px 14px -6px rgba(15, 61, 46, 0.7); }
+
+.report-title { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.35rem; }
+.report-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem 1.5rem; }
+.report-kpi-label { color: var(--p-text-muted); font-size: 1rem; }
+.report-kpi-value { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.report-kpi-value.emphasis { font-size: 2.1rem; color: #0f3d2e; }
+
+.report-section .h6 { font-weight: 700; }
+.report-table { border: 1px solid var(--p-line); border-radius: 12px; }
+.report-table .table thead th { background: #f6f7f6; color: #344054; font-size: 0.72rem; }
+.report-table .table > :not(caption) > * > * { border-right: 1px solid var(--p-line); }
+.report-table .table > :not(caption) > * > *:last-child { border-right: none; }
+.table-total > * { background: #f2f5f3 !important; font-weight: 700; border-top: 1px solid var(--p-line-strong); }
+
+@media (max-width: 991.98px) { .report-kpis { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 575.98px) {
+  .report-title { font-size: 1.25rem; }
+  .report-kpi-value { font-size: 1.3rem; }
+  .report-kpi-value.emphasis { font-size: 1.5rem; }
+  .report-kpi-label { font-size: 0.85rem; }
+  .chip { padding: 0.4rem 0.85rem; font-size: 0.85rem; }
+}
+
+@media print {
+  .report-card { border: none; box-shadow: none; }
+  .report-card .card-body { padding: 0; }
+  .report-table { border-radius: 0; break-inside: auto; }
+  .report-table .table tr { break-inside: avoid; }
+  .report-section { break-inside: avoid-page; }
+  .report-kpis { grid-template-columns: repeat(4, 1fr); }
+  .col-hide-sm { display: table-cell !important; }
+  .app-topbar, .sync-banner { display: none !important; }
+  @page { margin: 12mm; }
+}

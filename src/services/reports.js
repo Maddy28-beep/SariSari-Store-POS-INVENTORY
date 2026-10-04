@@ -3,7 +3,7 @@ import { db } from '../firebase/config';
 import { getDocsSafe } from '../firebase/offline';
 import { getAllProducts, stockStatus } from './products';
 
-/** period: 'daily' | 'weekly' | 'monthly', or { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' } for any dates. */
+/** period: 'daily' | 'yesterday' | 'weekly' | 'lastWeek' | 'monthly' | 'lastMonth', or { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' } for any dates. */
 export function rangeFor(period) {
   const now = new Date();
   let start;
@@ -11,6 +11,28 @@ export function rangeFor(period) {
     const from = new Date(`${period.from}T00:00:00`);
     const to = new Date(`${period.to || period.from}T23:59:59.999`);
     return { start: Timestamp.fromDate(from), end: Timestamp.fromDate(to), bounded: true };
+  }
+  // Whole past periods (yesterday / last week / last month) are bounded on both ends.
+  const day = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(day);
+  weekStart.setDate(day.getDate() - day.getDay());
+  const pastRange = (from, toExclusive) => ({
+    start: Timestamp.fromDate(from),
+    end: Timestamp.fromMillis(toExclusive.getTime() - 1),
+    bounded: true,
+  });
+  if (period === 'yesterday') {
+    const from = new Date(day);
+    from.setDate(day.getDate() - 1);
+    return pastRange(from, day);
+  }
+  if (period === 'lastWeek') {
+    const from = new Date(weekStart);
+    from.setDate(weekStart.getDate() - 7);
+    return pastRange(from, weekStart);
+  }
+  if (period === 'lastMonth') {
+    return pastRange(new Date(now.getFullYear(), now.getMonth() - 1, 1), new Date(now.getFullYear(), now.getMonth(), 1));
   }
   if (period === 'weekly') {
     start = new Date(now);
@@ -34,7 +56,7 @@ export async function getSalesInRange(period, cashierId = null) {
     ...(bounded ? [where('createdAt', '<=', end)] : []),
   );
   const snap = await getDocsSafe(q);
-  const sales = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const sales = snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
   return cashierId ? sales.filter((s) => s.cashierId === cashierId) : sales;
 }
 
