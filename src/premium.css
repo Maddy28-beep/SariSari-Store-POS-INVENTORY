@@ -588,13 +588,30 @@ body {
 
 .order-main { container-type: inline-size; }
 .ob-unit-sub { display: none; }
-/* Narrow card (phone, or tablet with the payment column beside it): stack each line */
+/* Medium/narrow card: one compact row per item - name, stepper, total, remove */
 @container (max-width: 680px) {
   .order-big-head, .ob-price { display: none; }
   .ob-unit-sub { display: block; }
-  .order-big-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name total' 'qty remove'; row-gap: 0.6rem; padding: 0.9rem 1rem; }
+  .order-big-row {
+    grid-template-columns: minmax(0, 1fr) 124px auto 36px;
+    grid-template-areas: 'name qty total remove';
+    gap: 0.6rem; padding: 0.8rem 1rem;
+  }
   .order-big-name { grid-area: name; }
-  .order-big-total { grid-area: total; }
-  .order-big-row .order-stepper { grid-area: qty; max-width: 170px; }
-  .order-big-remove { grid-area: remove; justify-self: end; }
+  .order-big-row .order-stepper { grid-area: qty; width: 124px; }
+  .order-big-row .order-stepper .btn { min-height: 38px; padding: 0 0.5rem; }
+  .order-big-row .order-stepper .form-control { min-height: 38px; }
+  .order-big-total { grid-area: total; font-size: 1.05rem; min-width: 4.5rem; }
+  .order-big-remove { grid-area: remove; justify-self: end; padding: 0; }
+}
+/* Very narrow (phones): name on its own line, then stepper - total - remove on one line */
+@container (max-width: 430px) {
+  .order-big-row {
+    grid-template-columns: auto minmax(0, 1fr) 36px;
+    grid-template-areas: 'name name name' 'qty total remove';
+    row-gap: 0.5rem;
+    column-gap: 0.75rem;
+  }
+  .order-big-row .order-stepper { width: 128px; }
+  .order-big-total { justify-self: end; }
 }
