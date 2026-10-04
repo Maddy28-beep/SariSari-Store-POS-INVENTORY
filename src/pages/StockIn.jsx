@@ -5,9 +5,11 @@ import { useAuth } from '../context/AuthContext';
 import { lookupByBarcode } from '../services/products';
 import { getSuppliers } from '../services/catalog';
 import { stockIn } from '../services/inventory';
+import { submitStockInRequest } from '../services/requests';
 
 export default function StockIn() {
-  const { profile } = useAuth();
+  const { profile, isOwnerOrAdmin } = useAuth();
+  const requestMode = !isOwnerOrAdmin;
   const navigate = useNavigate();
   const barcodeRef = useRef(null);
 
@@ -69,11 +71,17 @@ export default function StockIn() {
     setSaving(true);
     setStatus('');
     try {
-      for (const item of items) {
-        await stockIn(item.productId, item.quantity, item.costPrice, { supplierId: supplierId || null, userId: profile.id });
+      if (requestMode) {
+        await submitStockInRequest({ supplierId, items }, profile.id);
+        setItems([]);
+        setStatus('Sent to the owner for approval. Inventory will update once approved.');
+      } else {
+        for (const item of items) {
+          await stockIn(item.productId, item.quantity, item.costPrice, { supplierId: supplierId || null, userId: profile.id });
+        }
+        setItems([]);
+        setStatus('Stock received and inventory updated.');
       }
-      setItems([]);
-      setStatus('Stock received and inventory updated.');
     } catch (err) {
       setScanError(err.message || 'Something went wrong saving the receiving.');
     } finally {
@@ -82,7 +90,12 @@ export default function StockIn() {
   }
 
   return (
-    <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-box-arrow-in-down text-primary"></i> Receive Stock</h2>}>
+    <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-box-arrow-in-down text-primary"></i> {requestMode ? 'Request Stock In' : 'Receive Stock'}</h2>}>
+      {requestMode && (
+        <div className="alert alert-info py-2 small d-flex align-items-center gap-2">
+          <i className="bi bi-info-circle-fill"></i> Stock you receive here is sent to the owner for approval and is added to the inventory only once approved.
+        </div>
+      )}
       {status && (
         <div className="alert alert-success d-flex align-items-center gap-2">
           <i className="bi bi-check-circle-fill"></i> {status}
@@ -160,7 +173,7 @@ export default function StockIn() {
       <div className="d-flex justify-content-end">
         <button className="btn btn-success btn-lg d-flex align-items-center gap-2" disabled={items.length === 0 || saving} onClick={handleSave}>
           {saving ? <span className="spinner-border spinner-border-sm" role="status"></span> : <i className="bi bi-cloud-check"></i>}
-          {saving ? 'Saving…' : 'Save Receiving'}
+          {saving ? 'Saving…' : requestMode ? 'Send for Approval' : 'Save Receiving'}
         </button>
       </div>
     </Layout>

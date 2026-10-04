@@ -11,7 +11,7 @@ import { downloadCsv } from '../utils/csv';
 const PERIODS = { daily: 'Today', weekly: 'This Week', monthly: 'This Month' };
 
 export default function Reports() {
-  const { isOwnerOrAdmin } = useAuth();
+  const { isOwnerOrAdmin, profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const period = searchParams.get('period') || 'daily';
 
@@ -25,7 +25,7 @@ export default function Reports() {
     setLoading(true);
     (async () => {
       const [sales, items, stockReport, users, expenseList] = await Promise.all([
-        getSalesInRange(period),
+        getSalesInRange(period, isOwnerOrAdmin ? null : profile.id),
         getSaleItemsInRange(period),
         getStockReport(),
         getAllUsers(),
@@ -37,7 +37,7 @@ export default function Reports() {
       setStock(stockReport);
       setLoading(false);
     })();
-  }, [period, isOwnerOrAdmin]);
+  }, [period, isOwnerOrAdmin, profile.id]);
 
   const expenseSummary = summarizeExpenses(expenses);
   const net = (summary?.totalSales || 0) - expenseSummary.total;

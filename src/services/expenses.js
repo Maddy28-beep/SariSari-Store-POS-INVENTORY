@@ -26,11 +26,20 @@ export async function deleteExpense(id) {
   return settleFast(deleteDoc(doc(db, 'expenses', id)));
 }
 
-export async function getExpensesInRange(period) {
+/** recordedBy limits the result to one person's own entries (the cashier role). */
+export async function getExpensesInRange(period, recordedBy = null) {
   const { start } = rangeFor(period);
-  const q = query(collection(db, 'expenses'), where('createdAt', '>=', start), orderBy('createdAt', 'desc'));
+  const q = recordedBy
+    // Equality-only query (no index needed); the date filter is applied below.
+    ? query(collection(db, 'expenses'), where('recordedBy', '==', recordedBy))
+    : query(collection(db, 'expenses'), where('createdAt', '>=', start), orderBy('createdAt', 'desc'));
   const snap = await getDocsSafe(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
+  const list = snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
+  if (!recordedBy) return list;
+  const startMs = start.toMillis();
+  return list
+    .filter((e) => (e.createdAt?.toMillis?.() ?? Date.now()) >= startMs)
+    .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 }
 
 export function summarizeExpenses(expenses) {

@@ -115,10 +115,23 @@ service cloud.firestore {
       }
     }
 
+    // Cashiers can log expenses and see only their own; deleting is Owner/Admin only.
     match /expenses/{id} {
-      allow read: if isOwnerOrAdmin();
+      allow read: if isOwnerOrAdmin() || (isActive() && resource.data.recordedBy == request.auth.uid);
       allow create: if isActive() && request.resource.data.recordedBy == request.auth.uid;
       allow update, delete: if isOwnerOrAdmin();
+    }
+
+    // Cashier-proposed products / stock-ins. Nothing reaches the real inventory until an
+    // Owner/Admin approves (the approval itself is what writes products and stock).
+    match /inventoryRequests/{id} {
+      allow read: if isOwnerOrAdmin() || (isActive() && resource.data.requestedBy == request.auth.uid);
+      allow create: if isActive() && request.resource.data.requestedBy == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update: if isOwnerOrAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNote']);
+      allow delete: if false;
     }
 
     match /auditLogs/{id} {

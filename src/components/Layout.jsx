@@ -20,6 +20,7 @@ function SidebarLink({ to, icon, badge, children }) {
 export default function Layout({ children, header }) {
   const { profile, logout, isOwnerOrAdmin } = useAuth();
   const [pendingVoidCount, setPendingVoidCount] = useState(0);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const { online, pending } = useSyncStatus();
@@ -30,7 +31,11 @@ export default function Layout({ children, header }) {
     if (!isOwnerOrAdmin) return;
     const q = query(collection(db, 'sales'), where('voidStatus', '==', 'pending'));
     const unsub = onSnapshot(q, (snap) => setPendingVoidCount(snap.size));
-    return unsub;
+    const unsubRequests = onSnapshot(
+      query(collection(db, 'inventoryRequests'), where('status', '==', 'pending')),
+      (snap) => setPendingRequestCount(snap.size),
+    );
+    return () => { unsub(); unsubRequests(); };
   }, [isOwnerOrAdmin]);
 
   const initials = (profile?.name || '?').trim().charAt(0).toUpperCase();
@@ -63,11 +68,10 @@ export default function Layout({ children, header }) {
           <SidebarLink to="/" icon="bi-grid-1x2-fill">Dashboard</SidebarLink>
           <SidebarLink to="/pos" icon="bi-cart3">POS</SidebarLink>
           <SidebarLink to="/inventory" icon="bi-box-seam-fill">Inventory</SidebarLink>
-          {(profile?.role === 'owner' || profile?.role === 'admin') && (
-            <SidebarLink to="/stock-in" icon="bi-box-arrow-in-down">Stock In</SidebarLink>
-          )}
-          {isOwnerOrAdmin && <SidebarLink to="/reports" icon="bi-graph-up-arrow">Reports</SidebarLink>}
-          {isOwnerOrAdmin && <SidebarLink to="/expenses" icon="bi-wallet2">Expenses</SidebarLink>}
+          <SidebarLink to="/stock-in" icon="bi-box-arrow-in-down">Stock In</SidebarLink>
+          <SidebarLink to="/reports" icon="bi-graph-up-arrow">Reports</SidebarLink>
+          <SidebarLink to="/expenses" icon="bi-wallet2">Expenses</SidebarLink>
+          {isOwnerOrAdmin && <SidebarLink to="/approvals" icon="bi-clipboard-check" badge={pendingRequestCount}>Approvals</SidebarLink>}
           {isOwnerOrAdmin && (
             <SidebarLink to="/void-requests" icon="bi-shield-exclamation" badge={pendingVoidCount}>Void Requests</SidebarLink>
           )}

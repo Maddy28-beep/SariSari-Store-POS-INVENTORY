@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
+import MyRequests from '../components/MyRequests';
 import { getAllProducts, stockStatus } from '../services/products';
 import { getCategories } from '../services/catalog';
 
@@ -12,7 +13,7 @@ const STATUS_BADGE = {
 };
 
 export default function Inventory() {
-  const { isOwnerOrAdmin } = useAuth();
+  const { isOwnerOrAdmin, profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState({});
@@ -51,13 +52,12 @@ export default function Inventory() {
     <Layout header={
       <div className="d-flex justify-content-between align-items-center">
         <h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-box-seam-fill text-primary"></i> Inventory</h2>
-        {isOwnerOrAdmin && (
-          <Link to="/inventory/new" className="btn btn-primary d-flex align-items-center gap-2">
-            <i className="bi bi-plus-lg"></i> Add Product
-          </Link>
-        )}
+        <Link to="/inventory/new" className="btn btn-primary d-flex align-items-center gap-2">
+          <i className="bi bi-plus-lg"></i> {isOwnerOrAdmin ? 'Add Product' : 'Request New Product'}
+        </Link>
       </div>
     }>
+      {!isOwnerOrAdmin && <MyRequests userId={profile?.id} />}
       <div className="card mb-3">
         <div className="card-body">
           <div className="row g-2">

@@ -5,10 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import { getCategories, getUnits, getSuppliers } from '../services/catalog';
 import { createProduct, lookupByBarcode } from '../services/products';
 import { moveStock, InventoryTypes } from '../services/inventory';
+import { submitProductRequest } from '../services/requests';
 import { generateInternalBarcode } from '../utils/barcode';
 
 export default function ProductCreate() {
-  const { profile } = useAuth();
+  const { profile, isOwnerOrAdmin } = useAuth();
+  // Cashiers don't add to the inventory directly - their entry waits for owner approval.
+  const requestMode = !isOwnerOrAdmin;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -84,6 +87,13 @@ export default function ProductCreate() {
     setSubmitting(true);
     try {
       const unit = units.find((u) => u.id === form.unitId);
+
+      if (requestMode) {
+        await submitProductRequest(form, unit, profile.id);
+        navigate('/inventory');
+        return;
+      }
+
       const ref = await createProduct({
         barcode: form.barcode || null,
         name: form.name,
@@ -109,9 +119,14 @@ export default function ProductCreate() {
   }
 
   return (
-    <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-box-seam text-primary"></i> Add New Product</h2>}>
+    <Layout header={<h2 className="h4 mb-0 d-flex align-items-center gap-2"><i className="bi bi-box-seam text-primary"></i> {requestMode ? 'Request New Product' : 'Add New Product'}</h2>}>
       <div className="card mx-auto shadow-sm" style={{ maxWidth: 560 }}>
         <div className="card-body">
+          {requestMode && (
+            <div className="alert alert-info py-2 small d-flex align-items-center gap-2">
+              <i className="bi bi-info-circle-fill"></i> This goes to the owner for approval. It won't appear in the inventory until approved.
+            </div>
+          )}
           {error && (
             <div className="alert alert-danger d-flex align-items-center gap-2 py-2">
               <i className="bi bi-exclamation-circle-fill"></i> {error}
@@ -208,7 +223,7 @@ export default function ProductCreate() {
               <button type="button" className="btn btn-outline-secondary" onClick={() => navigate('/inventory')}>Cancel</button>
               <button type="submit" className="btn btn-primary d-flex align-items-center gap-2" disabled={submitting}>
                 {submitting ? <span className="spinner-border spinner-border-sm" role="status"></span> : <i className="bi bi-check-lg"></i>}
-                {submitting ? 'Saving…' : 'Save Product'}
+                {submitting ? 'Saving…' : requestMode ? 'Send for Approval' : 'Save Product'}
               </button>
             </div>
           </form>

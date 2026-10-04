@@ -11,7 +11,7 @@ import {
 const PERIODS = { daily: 'Today', weekly: 'This Week', monthly: 'This Month' };
 
 export default function Expenses() {
-  const { profile } = useAuth();
+  const { profile, isOwnerOrAdmin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const period = searchParams.get('period') || 'daily';
 
@@ -23,11 +23,14 @@ export default function Expenses() {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    const [list, sales] = await Promise.all([getExpensesInRange(period), getSalesInRange(period)]);
+    const [list, sales] = await Promise.all([
+      getExpensesInRange(period, isOwnerOrAdmin ? null : profile.id),
+      isOwnerOrAdmin ? getSalesInRange(period) : Promise.resolve([]),
+    ]);
     setExpenses(list);
     setSalesTotal(sales.reduce((sum, s) => sum + s.total, 0));
     setLoading(false);
-  }, [period]);
+  }, [period, isOwnerOrAdmin, profile.id]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -70,11 +73,13 @@ export default function Expenses() {
       </ul>
 
       <div className="row g-3 mb-4">
-        <div className="col-md-4"><StatCard icon="bi-cash-stack" label="Sales" value={`₱${salesTotal.toFixed(2)}`} /></div>
-        <div className="col-md-4"><StatCard icon="bi-wallet2" variant="warning" label="Expenses" value={`₱${total.toFixed(2)}`} sublabel={`${expenses.length} entries`} /></div>
-        <div className="col-md-4">
-          <StatCard icon="bi-piggy-bank" variant={net < 0 ? 'danger' : undefined} label="Net (Sales − Expenses)" value={`₱${net.toFixed(2)}`} />
-        </div>
+        {isOwnerOrAdmin && <div className="col-md-4"><StatCard icon="bi-cash-stack" label="Sales" value={`₱${salesTotal.toFixed(2)}`} /></div>}
+        <div className={isOwnerOrAdmin ? 'col-md-4' : 'col-12'}><StatCard icon="bi-wallet2" variant="warning" label={isOwnerOrAdmin ? 'Expenses' : 'My Expenses'} value={`₱${total.toFixed(2)}`} sublabel={`${expenses.length} entries`} /></div>
+        {isOwnerOrAdmin && (
+          <div className="col-md-4">
+            <StatCard icon="bi-piggy-bank" variant={net < 0 ? 'danger' : undefined} label="Net (Sales − Expenses)" value={`₱${net.toFixed(2)}`} />
+          </div>
+        )}
       </div>
 
       <div className="row g-3">
@@ -126,7 +131,9 @@ export default function Expenses() {
                       <td>{e.description}</td>
                       <td className="text-end fw-semibold">₱{e.amount.toFixed(2)}</td>
                       <td className="text-end">
-                        <button className="btn btn-sm btn-outline-danger" aria-label="Delete expense" onClick={() => handleDelete(e.id)}><i className="bi bi-trash"></i></button>
+                        {isOwnerOrAdmin && (
+                          <button className="btn btn-sm btn-outline-danger" aria-label="Delete expense" onClick={() => handleDelete(e.id)}><i className="bi bi-trash"></i></button>
+                        )}
                       </td>
                     </tr>
                   ))}

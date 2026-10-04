@@ -16,6 +16,7 @@ import UserEdit from './pages/UserEdit';
 import Settings from './pages/Settings';
 import VoidRequests from './pages/VoidRequests';
 import Expenses from './pages/Expenses';
+import Approvals from './pages/Approvals';
 
 export default function App() {
   return (
@@ -26,14 +27,15 @@ export default function App() {
       <Route path="/pos" element={<ProtectedRoute><Pos /></ProtectedRoute>} />
       <Route path="/pos/receipt/:saleId" element={<ProtectedRoute><Receipt /></ProtectedRoute>} />
       <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute roles={['owner', 'admin']}><Reports /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
-      <Route path="/inventory/new" element={<ProtectedRoute roles={['owner', 'admin']}><ProductCreate /></ProtectedRoute>} />
+      <Route path="/inventory/new" element={<ProtectedRoute><ProductCreate /></ProtectedRoute>} />
+      <Route path="/approvals" element={<ProtectedRoute roles={['owner', 'admin']}><Approvals /></ProtectedRoute>} />
       <Route path="/inventory/:productId/edit" element={<ProtectedRoute roles={['owner', 'admin']}><ProductEdit /></ProtectedRoute>} />
       <Route path="/inventory/:productId/label" element={<ProtectedRoute roles={['owner', 'admin']}><ProductLabel /></ProtectedRoute>} />
-      <Route path="/stock-in" element={<ProtectedRoute roles={['owner', 'admin']}><StockIn /></ProtectedRoute>} />
-      <Route path="/expenses" element={<ProtectedRoute roles={['owner', 'admin']}><Expenses /></ProtectedRoute>} />
+      <Route path="/stock-in" element={<ProtectedRoute><StockIn /></ProtectedRoute>} />
+      <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
       <Route path="/void-requests" element={<ProtectedRoute roles={['owner', 'admin']}><VoidRequests /></ProtectedRoute>} />
 
       <Route path="/users" element={<ProtectedRoute roles={['owner']}><Users /></ProtectedRoute>} />
