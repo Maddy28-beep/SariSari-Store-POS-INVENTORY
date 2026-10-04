@@ -25,6 +25,7 @@ export default function Pos() {
   const [cart, setCart] = useState([]);
   const [discount, setDiscount] = useState(0);
   const [customer, setCustomer] = useState(null);
+  const [orderOpen, setOrderOpen] = useState(false);
   const [discountRequestId, setDiscountRequestId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [amountTendered, setAmountTendered] = useState('');
@@ -244,58 +245,50 @@ export default function Pos() {
               </div>
             </div>
           </div>
-
-          <div className="card">
-            <div className="table-responsive">
-              <table className="table table-hover mb-0 align-middle">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th style={{ width: 160 }}>Qty</th>
-                    <th className="text-end">Price</th>
-                    <th className="text-end">Total</th>
-                    <th style={{ width: 40 }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cart.length === 0 ? (
-                    <tr>
-                      <td colSpan={5}>
-                        <div className="empty-state">
-                          <i className="bi bi-upc-scan"></i>
-                          Scan a barcode or tap a product above to begin.
-                        </div>
-                      </td>
-                    </tr>
-                  ) : cart.map((item, index) => (
-                    <tr key={item.productId} className="pos-cart-row">
-                      <td className="fw-semibold">{item.name}</td>
-                      <td>
-                        <div className="input-group input-group-sm">
-                          <button className="btn btn-outline-secondary" onClick={() => updateQty(index, -1)}><i className="bi bi-dash"></i></button>
-                          <input
-                            type="number" className="form-control text-center"
-                            step={stepFor(item)}
-                            value={item.quantity}
-                            onChange={(e) => setQty(index, e.target.value)}
-                          />
-                          <button className="btn btn-outline-secondary" onClick={() => updateQty(index, 1)}><i className="bi bi-plus"></i></button>
-                        </div>
-                      </td>
-                      <td className="text-end">₱{item.sellingPrice.toFixed(2)}</td>
-                      <td className="text-end fw-semibold">₱{(item.sellingPrice * item.quantity).toFixed(2)}</td>
-                      <td><button className="btn btn-sm btn-link text-danger" onClick={() => removeItem(index)}><i className="bi bi-trash3"></i></button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
 
         <div className="col-lg-4">
-          <div className="card">
-            <div className="card-body">
+          <div className={`order-panel ${orderOpen ? 'open' : ''}`}>
+          <div className="card order-card">
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <span>Current Order</span>
+              <span className="d-flex align-items-center gap-2">
+                <span className="badge text-bg-secondary">{cart.length} {cart.length === 1 ? 'item' : 'items'}</span>
+                <button type="button" className="btn-close d-lg-none" aria-label="Hide order" onClick={() => setOrderOpen(false)}></button>
+              </span>
+            </div>
+
+            <div className="order-lines">
+              {cart.length === 0 ? (
+                <div className="empty-state py-4">
+                  <i className="bi bi-upc-scan"></i>
+                  Scan a barcode or tap a product to begin.
+                </div>
+              ) : cart.map((item, index) => (
+                <div key={item.productId} className="order-line">
+                  <div className="d-flex justify-content-between align-items-start gap-2">
+                    <span className="fw-semibold">{item.name}</span>
+                    <span className="fw-bold text-nowrap">₱{(item.sellingPrice * item.quantity).toFixed(2)}</span>
+                  </div>
+                  <div className="text-secondary small mb-2">₱{item.sellingPrice.toFixed(2)}{item.unit ? ` / ${item.unit}` : ''}</div>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="input-group input-group-sm order-stepper">
+                      <button type="button" className="btn btn-outline-secondary" aria-label="Less" onClick={() => updateQty(index, -1)}><i className="bi bi-dash"></i></button>
+                      <input
+                        type="number" className="form-control text-center"
+                        step={stepFor(item)}
+                        value={item.quantity}
+                        onChange={(e) => setQty(index, e.target.value)}
+                      />
+                      <button type="button" className="btn btn-outline-secondary" aria-label="More" onClick={() => updateQty(index, 1)}><i className="bi bi-plus"></i></button>
+                    </div>
+                    <button type="button" className="btn btn-sm btn-link text-danger" aria-label="Remove item" onClick={() => removeItem(index)}><i className="bi bi-trash3"></i></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="card-body order-body">
               <div className="d-flex justify-content-between mb-2 text-secondary">
                 <span>Subtotal</span>
                 <span>₱{subtotal.toFixed(2)}</span>
@@ -394,8 +387,17 @@ export default function Pos() {
               )}
             </div>
           </div>
+          </div>
         </div>
       </div>
+
+      {/* Phones & tablets: the order lives in a slide-up sheet, opened from this bar */}
+      <button type="button" className="order-bar d-lg-none d-print-none" onClick={() => setOrderOpen(true)}>
+        <span className="d-flex align-items-center gap-2"><i className="bi bi-bag-check-fill"></i> Show order</span>
+        <span className="order-bar-count">{cart.length} {cart.length === 1 ? 'item' : 'items'}</span>
+        <strong>₱{total.toFixed(2)}</strong>
+      </button>
+      {orderOpen && <div className="order-backdrop d-lg-none" onClick={() => setOrderOpen(false)}></div>}
     </Layout>
   );
 }
