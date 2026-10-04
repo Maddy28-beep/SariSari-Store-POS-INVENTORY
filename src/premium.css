@@ -447,3 +447,48 @@ body {
   .app-topbar, .sync-banner { display: none !important; }
   @page { margin: 12mm; }
 }
+
+/* ---------- One-table report sheet ---------- */
+.report-sheet {
+  background: var(--p-surface);
+  border: 1px solid var(--p-line);
+  border-radius: 16px;
+  box-shadow: var(--p-shadow-card);
+  padding: 1.5rem 1.5rem 1.25rem;
+}
+.report-sheet-title { text-align: center; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.35rem; }
+.report-sheet-sub { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem 1.5rem; color: var(--p-text-muted); font-size: 0.92rem; margin-bottom: 1.1rem; }
+.report-main td, .report-main th { font-size: 0.9rem; }
+.report-items { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-strip {
+  display: flex; flex-wrap: wrap; gap: 0.6rem 2rem;
+  margin-top: 1rem; padding: 1rem 1.25rem;
+  background: #f4f6f5; border: 1px solid var(--p-line); border-radius: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.report-strip > div { display: flex; flex-direction: column; min-width: 8.5rem; }
+.report-strip span { color: var(--p-text-muted); font-size: 0.82rem; }
+.report-strip strong { font-size: 1.25rem; letter-spacing: -0.02em; }
+.report-strip .highlight strong { color: #0f3d2e; }
+.report-footnote { color: var(--p-text-muted); font-size: 0.8rem; margin: 0.75rem 0 0; }
+
+.col-hide-md { display: none; }
+@media (min-width: 1200px) { .col-hide-md { display: table-cell; } }
+.report-main td a.font-monospace { white-space: nowrap; }
+@media (max-width: 575.98px) {
+  .report-sheet { padding: 1rem; }
+  .report-sheet-title { font-size: 1.2rem; }
+  .report-strip { gap: 0.6rem 1rem; padding: 0.85rem; }
+  .report-strip > div { min-width: calc(50% - 0.5rem); }
+  .report-strip strong { font-size: 1.05rem; }
+}
+@media print {
+  .report-sheet { border: none; box-shadow: none; padding: 0; }
+  .report-items { max-width: none; white-space: normal; }
+  .report-main td, .report-main th { font-size: 0.78rem; padding: 0.35rem 0.5rem; }
+  .report-main .col-hide-md { display: table-cell !important; }
+  .report-strip { background: #fff; break-inside: avoid; }
+}
+
+/* Payment note under the amount on phones: wrap instead of widening the table */
+.table td.text-end .pay-sub { white-space: normal; max-width: 8rem; margin-left: auto; line-height: 1.25; }

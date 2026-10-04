@@ -11,36 +11,35 @@ import { getExpensesInRange, summarizeExpenses } from '../services/expenses';
 import { downloadCsv } from '../utils/csv';
 
 const PRESETS = [
-  { key: 'daily', label: 'Today' },
-  { key: 'yesterday', label: 'Yesterday' },
-  { key: 'weekly', label: 'This week' },
-  { key: 'lastWeek', label: 'Last week' },
-  { key: 'monthly', label: 'This month' },
-  { key: 'lastMonth', label: 'Last month' },
-  { key: 'custom', label: 'Custom range' },
+  { key: 'daily', label: 'Today', heading: 'Daily Sales Report' },
+  { key: 'yesterday', label: 'Yesterday', heading: 'Daily Sales Report' },
+  { key: 'weekly', label: 'This week', heading: 'Weekly Sales Report' },
+  { key: 'lastWeek', label: 'Last week', heading: 'Weekly Sales Report' },
+  { key: 'monthly', label: 'This month', heading: 'Monthly Sales Report' },
+  { key: 'lastMonth', label: 'Last month', heading: 'Monthly Sales Report' },
+  { key: 'custom', label: 'Custom range', heading: 'Sales Report' },
 ];
 
 const todayStr = () => new Date().toLocaleDateString('en-CA');
 const money = (n) => `₱${(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fullDate = (d) => d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+const fullDate = (d) => d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 const sameDay = (a, b) => a.toDateString() === b.toDateString();
 
-function Section({ title, hint, children }) {
+/** "Cash", "GCash (ref 1234)", "Cash + GCash" - how the customer paid, in plain words. */
+function payLabel(sale) {
+  const legs = sale.payments || [{ method: sale.paymentMethod, reference: sale.paymentReference }];
+  return legs
+    .map((p) => (p.method === 'gcash' ? `GCash${p.reference ? ` (${p.reference})` : ''}` : p.method === 'cash' ? 'Cash' : p.method))
+    .join(' + ');
+}
+
+function Details({ title, hint, children }) {
   return (
-    <section className="report-section mb-4">
+    <section className="mb-4">
       <h3 className="h6 mb-1">{title}</h3>
       {hint && <p className="text-secondary small mb-2">{hint}</p>}
       <div className="table-responsive report-table">{children}</div>
     </section>
-  );
-}
-
-function Kpi({ label, value, emphasis }) {
-  return (
-    <div className="report-kpi">
-      <div className="report-kpi-label">{label}</div>
-      <div className={`report-kpi-value ${emphasis ? 'emphasis' : ''}`}>{value}</div>
-    </div>
   );
 }
 
@@ -54,6 +53,7 @@ export default function Reports() {
   const period = periodKey === 'custom' ? { from, to } : periodKey;
 
   const [sales, setSales] = useState([]);
+  const [itemsBySale, setItemsBySale] = useState({});
   const [summary, setSummary] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [refunds, setRefunds] = useState([]);
@@ -74,7 +74,10 @@ export default function Reports() {
         isOwnerOrAdmin ? getRefundsInRange(period) : Promise.resolve([]),
       ]);
       setUsersById(Object.fromEntries(users.map((u) => [u.id, u.name])));
-      saleList.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+      saleList.sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+      const bySale = {};
+      items.forEach((i) => { (bySale[i.saleId] ||= []).push(i); });
+      setItemsBySale(bySale);
       setSales(saleList);
       setSummary(summarizeReports(saleList, items));
       setExpenses(expenseList);
@@ -90,70 +93,59 @@ export default function Reports() {
   const startDate = start.toDate();
   const endDate = end.toDate();
   const preset = PRESETS.find((p) => p.key === periodKey);
-  const dateText = sameDay(startDate, endDate) ? fullDate(startDate) : `${fullDate(startDate)} – ${fullDate(endDate)}`;
-  const title = periodKey === 'custom' ? `Custom range — ${dateText}` : `${preset.label} — ${dateText}`;
   const multiDay = !sameDay(startDate, endDate);
+  const dateText = multiDay ? `${fullDate(startDate)} – ${fullDate(endDate)}` : fullDate(startDate);
 
   const gross = sales.reduce((sum, s) => sum + (s.subtotal ?? s.total), 0);
   const discounts = sales.reduce((sum, s) => sum + (s.discount || 0), 0);
-  const net = sales.reduce((sum, s) => sum + s.total, 0);
+  const collected = sales.reduce((sum, s) => sum + s.total, 0);
 
+  const paid = (method) => summary?.paymentSummary.find((p) => p.method === method)?.total || 0;
   const expenseSummary = summarizeExpenses(expenses);
   const refundTotal = refunds.reduce((sum, r) => sum + r.amount, 0);
-  const bottomLine = net - refundTotal - expenseSummary.total;
-  const paid = (method) => summary?.paymentSummary.find((p) => p.method === method)?.total || 0;
-  const cashDrawer = paid('cash') - refundTotal - expenseSummary.total;
+  const netCash = paid('cash') - refundTotal - expenseSummary.total;
+  const netAfter = collected - refundTotal - expenseSummary.total;
+
+  const itemsText = (s) => (itemsBySale[s.id] || []).map((i) => `${i.productName} ×${i.quantity}`).join(', ');
+  const when = (s) => {
+    const d = s.createdAt?.toDate?.();
+    if (!d) return '—';
+    return multiDay
+      ? d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+      : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  };
 
   const cashierRows = (() => {
     const by = {};
     sales.forEach((s) => {
-      by[s.cashierId] ||= { cashierId: s.cashierId, count: 0, gross: 0, discount: 0, net: 0 };
+      by[s.cashierId] ||= { cashierId: s.cashierId, count: 0, net: 0 };
       by[s.cashierId].count += 1;
-      by[s.cashierId].gross += s.subtotal ?? s.total;
-      by[s.cashierId].discount += s.discount || 0;
       by[s.cashierId].net += s.total;
     });
     return Object.values(by).sort((a, b) => b.net - a.net);
   })();
 
-  const when = (s) => {
-    const d = s.createdAt?.toDate?.();
-    if (!d) return '—';
-    return multiDay
-      ? d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-      : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
   function handleDownload() {
     const n = (x) => (x || 0).toFixed(2);
     const rows = [
-      ['Sarisari POS — Sales Report', title],
+      [preset.heading, dateText],
       ['Printed', `${new Date().toLocaleString()} by ${profile.name}`],
       [],
-      ['SUMMARY'],
-      ['Gross sales', n(gross)], ['Discounts', n(discounts)], ['Net sales', n(net)], ['Transactions', sales.length],
+      ['Time', 'Receipt #', 'Items', 'Customer', 'Cashier', 'Payment', 'Amount', 'Discount', 'Paid'],
+      ...sales.map((s) => [s.createdAt?.toDate?.().toLocaleString() || '', s.transactionNo, itemsText(s), s.customerName || 'Walk-in', usersById[s.cashierId] || '', payLabel(s), n(s.subtotal ?? s.total), n(s.discount), n(s.total)]),
+      ['Totals', '', '', '', '', '', n(gross), n(discounts), n(collected)],
+      [],
+      ['Cash collected', n(paid('cash'))],
+      ['GCash collected', n(paid('gcash'))],
+      ['Total collected', n(collected)],
       ...(isOwnerOrAdmin ? [
-        ['Refunds', n(refundTotal)], ['Expenses', n(expenseSummary.total)], ['Net after refunds & expenses', n(bottomLine)],
-        ['Cash sales', n(paid('cash'))], ['GCash sales', n(paid('gcash'))], ['Expected cash in drawer', n(cashDrawer)],
-      ] : []),
-      [],
-      ['SALES BY PAYMENT METHOD'], ['Method', 'Payments', 'Amount'],
-      ...summary.paymentSummary.map((p) => [p.method, p.count, n(p.total)]),
-      [],
-      ['SALES BY CASHIER'], ['Cashier', 'Transactions', 'Gross', 'Discounts', 'Net'],
-      ...cashierRows.map((c) => [usersById[c.cashierId] || '', c.count, n(c.gross), n(c.discount), n(c.net)]),
-      [],
-      ['TRANSACTIONS'], ['Date', 'Receipt #', 'Cashier', 'Customer', 'Payment', 'Gross', 'Discount', 'Net'],
-      ...sales.map((s) => [s.createdAt?.toDate?.().toLocaleString() || '', s.transactionNo, usersById[s.cashierId] || '', s.customerName || '', s.paymentMethod, n(s.subtotal ?? s.total), n(s.discount), n(s.total)]),
-      [],
-      ['BEST SELLERS'], ['Product', 'Qty sold', 'Revenue'],
-      ...summary.bestSellers.map((b) => [b.productName, b.qty, n(b.revenue)]),
-      ...(isOwnerOrAdmin ? [
+        ['Refunds', n(refundTotal)], ['Expenses', n(expenseSummary.total)],
+        ['Net cash (cash - refunds - expenses)', n(netCash)], ['Net after expenses', n(netAfter)],
         [],
-        ['EXPENSES'], ['Date', 'Category', 'Description', 'Amount'],
+        ['EXPENSES'], ['Time', 'Category', 'Description', 'Amount'],
         ...expenses.map((e) => [e.createdAt?.toDate?.().toLocaleString() || '', e.category, e.description, n(e.amount)]),
         [],
-        ['REFUNDS'], ['Date', 'Receipt #', 'Reason', 'Amount'],
+        ['REFUNDS'], ['Time', 'Receipt #', 'Reason', 'Amount'],
         ...refunds.map((r) => [r.createdAt?.toDate?.().toLocaleString() || '', r.transactionNo, r.reason, n(r.amount)]),
       ] : []),
     ];
@@ -211,206 +203,180 @@ export default function Reports() {
       {loading || !summary || !stock ? (
         <PageSkeleton />
       ) : (
-        <div className="card report-card">
-          <div className="card-body">
-            <h3 className="report-title">{title}</h3>
-            <p className="text-secondary mb-3">
-              Printed {new Date().toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: '2-digit', hour: 'numeric', minute: '2-digit' })}
-              <span className="small"> · system timestamp (read-only) · </span>{profile.name}
-              {!isOwnerOrAdmin && <span className="small"> · showing your own sales</span>}
-            </p>
-
-            <div className="report-kpis mb-3">
-              <Kpi label="Gross sales" value={money(gross)} />
-              <Kpi label="Discounts" value={money(discounts)} />
-              <Kpi label="Net sales" value={money(net)} />
-              {isOwnerOrAdmin
-                ? <Kpi label="Net after refunds & expenses" value={money(bottomLine)} emphasis />
-                : <Kpi label="Transactions" value={sales.length} emphasis />}
+        <>
+          {/* ---- The report sheet: one table + a summary strip ---- */}
+          <div className="report-sheet">
+            <h3 className="report-sheet-title">{preset.heading}</h3>
+            <div className="report-sheet-sub">
+              <span>Date: {dateText}</span>
+              <span>Time: {new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+              <span>Prepared by: {profile.name}</span>
+              {!isOwnerOrAdmin && <span>(your own sales)</span>}
             </div>
 
-            <p className="text-secondary small mb-4">
-              {isOwnerOrAdmin
-                ? <>Refunds ({refunds.length}) of {money(refundTotal)} and expenses ({expenses.length}) of {money(expenseSummary.total)} are deducted only in the last figure — Gross, Discounts and Net sales are straight from the receipts. </>
-                : null}
-              Voided sales are not counted.
-            </p>
-
-            <Section title="Sales by payment method" hint="Where the money actually came in.">
-              <table className="table align-middle">
-                <thead><tr><th>Method</th><th className="text-end">Payments</th><th className="text-end">Amount</th><th className="text-end col-hide-sm">Share</th></tr></thead>
-                <tbody>
-                  {summary.paymentSummary.length === 0 ? (
-                    <tr><td colSpan={4} className="text-center text-secondary py-3">No sales in this period.</td></tr>
-                  ) : summary.paymentSummary.map((p) => (
-                    <tr key={p.method}>
-                      <td className="text-uppercase fw-semibold">{p.method}</td>
-                      <td className="text-end">{p.count}</td>
-                      <td className="text-end fw-semibold">{money(p.total)}</td>
-                      <td className="text-end col-hide-sm text-secondary">{net ? `${((p.total / net) * 100).toFixed(0)}%` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Section>
-
-            {isOwnerOrAdmin && (
-              <Section title="Cash drawer & GCash" hint="Count the drawer against this at closing.">
-                <table className="table align-middle">
-                  <tbody>
-                    <tr><td>Cash received from sales</td><td className="text-end">{money(paid('cash'))}</td></tr>
-                    <tr><td>Less: refunds paid out</td><td className="text-end text-danger">− {money(refundTotal)}</td></tr>
-                    <tr><td>Less: expenses paid from the drawer</td><td className="text-end text-danger">− {money(expenseSummary.total)}</td></tr>
-                    <tr className="table-total"><td>Expected cash in drawer</td><td className="text-end">{money(cashDrawer)}</td></tr>
-                    <tr><td>GCash received (should match the wallet)</td><td className="text-end fw-semibold">{money(paid('gcash'))}</td></tr>
-                  </tbody>
-                </table>
-              </Section>
-            )}
-
-            <Section title={`Sales by cashier (${cashierRows.length})`}>
-              <table className="table align-middle">
-                <thead><tr><th>Cashier</th><th className="text-end">Txns</th><th className="text-end col-hide-sm">Gross</th><th className="text-end col-hide-sm">Discounts</th><th className="text-end">Net</th></tr></thead>
-                <tbody>
-                  {cashierRows.length === 0 ? (
-                    <tr><td colSpan={5} className="text-center text-secondary py-3">No sales in this period.</td></tr>
-                  ) : cashierRows.map((c) => (
-                    <tr key={c.cashierId}>
-                      <td className="fw-semibold">{usersById[c.cashierId] || '—'}</td>
-                      <td className="text-end">{c.count}</td>
-                      <td className="text-end col-hide-sm">{money(c.gross)}</td>
-                      <td className="text-end col-hide-sm">{money(c.discount)}</td>
-                      <td className="text-end fw-semibold">{money(c.net)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Section>
-
-            <Section title={`Transactions (${sales.length})`} hint="One row per receipt, newest first.">
-              <table className="table table-hover align-middle">
+            <div className="table-responsive report-table">
+              <table className="table table-hover align-middle report-main">
                 <thead>
                   <tr>
-                    <th>{multiDay ? 'Date' : 'Time'}</th><th>Receipt #</th><th className="col-hide-sm">Cashier</th><th className="col-hide-sm">Customer</th>
-                    <th className="col-hide-sm">Payment</th><th className="text-end col-hide-sm">Gross</th><th className="text-end col-hide-sm">Discount</th><th className="text-end">Net</th>
+                    <th className="col-hide-sm">{multiDay ? 'Date' : 'Time'}</th>
+                    <th>Receipt #</th>
+                    <th className="col-hide-md">Items</th>
+                    <th className="col-hide-md">Customer</th>
+                    <th className="col-hide-sm">Cashier</th>
+                    <th className="col-hide-sm">Payment</th>
+                    <th className="text-end col-hide-sm">Amount</th>
+                    <th className="text-end col-hide-sm">Discount</th>
+                    <th className="text-end">Paid</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sales.length === 0 ? (
-                    <tr><td colSpan={8} className="text-center text-secondary py-3">No sales in this period.</td></tr>
+                    <tr><td colSpan={9} className="text-center text-secondary py-4">No sales in this period.</td></tr>
                   ) : sales.map((s) => (
                     <tr key={s.id}>
-                      <td className="text-nowrap text-secondary">{when(s)}</td>
-                      <td><Link to={`/pos/receipt/${s.id}`} className="font-monospace small fw-semibold">{s.transactionNo}</Link></td>
+                      <td className="text-nowrap col-hide-sm">{when(s)}</td>
+                      <td>
+                        <Link to={`/pos/receipt/${s.id}`} className="font-monospace small fw-semibold">{s.transactionNo}</Link>
+                        <div className="d-sm-none small text-secondary">{when(s)}</div>
+                        <div className="d-xl-none small text-secondary report-items">{itemsText(s)}</div>
+                      </td>
+                      <td className="col-hide-md report-items">{itemsText(s)}</td>
+                      <td className="col-hide-md">{s.customerName || <span className="text-secondary">Walk-in</span>}</td>
                       <td className="col-hide-sm">{usersById[s.cashierId] || '—'}</td>
-                      <td className="col-hide-sm">{s.customerName || <span className="text-secondary">Walk-in</span>}</td>
-                      <td className="col-hide-sm"><span className="badge text-bg-light text-uppercase">{s.paymentMethod}</span></td>
-                      <td className="text-end col-hide-sm">{(s.subtotal ?? s.total).toFixed(2)}</td>
-                      <td className="text-end col-hide-sm">{s.discount ? s.discount.toFixed(2) : '—'}</td>
-                      <td className="text-end fw-semibold">{s.total.toFixed(2)}</td>
+                      <td className="col-hide-sm">{payLabel(s)}</td>
+                      <td className="text-end col-hide-sm">{money(s.subtotal ?? s.total)}</td>
+                      <td className="text-end col-hide-sm">{s.discount ? money(s.discount) : ''}</td>
+                      <td className="text-end fw-semibold">
+                        {money(s.total)}
+                        <div className="d-sm-none small text-secondary fw-normal pay-sub">{payLabel(s)}</div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
                 {sales.length > 0 && (
                   <tfoot>
                     <tr className="table-total">
-                      <td colSpan={2}>Total</td><td className="col-hide-sm"></td><td className="col-hide-sm"></td><td className="col-hide-sm"></td>
-                      <td className="text-end col-hide-sm">{gross.toFixed(2)}</td><td className="text-end col-hide-sm">{discounts.toFixed(2)}</td><td className="text-end">{net.toFixed(2)}</td>
+                      <td className="col-hide-sm"></td>
+                      <td>Totals ({sales.length})</td>
+                      <td className="col-hide-md"></td><td className="col-hide-md"></td><td className="col-hide-sm"></td><td className="col-hide-sm"></td>
+                      <td className="text-end col-hide-sm">{money(gross)}</td>
+                      <td className="text-end col-hide-sm">{money(discounts)}</td>
+                      <td className="text-end">{money(collected)}</td>
                     </tr>
                   </tfoot>
                 )}
               </table>
-            </Section>
-
-            <Section title="Best-selling products">
-              <table className="table align-middle">
-                <thead><tr><th>Product</th><th className="text-end">Qty sold</th><th className="text-end">Revenue</th></tr></thead>
-                <tbody>
-                  {summary.bestSellers.length === 0 ? (
-                    <tr><td colSpan={3} className="text-center text-secondary py-3">No sales in this period.</td></tr>
-                  ) : summary.bestSellers.map((b) => (
-                    <tr key={b.productName}><td className="fw-semibold">{b.productName}</td><td className="text-end">{b.qty}</td><td className="text-end">{money(b.revenue)}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </Section>
-
-            {isOwnerOrAdmin && (
-              <>
-                <Section title={`Expenses (${expenses.length})`} hint={expenseSummary.byCategory.map((c) => `${c.category} ${money(c.amount)}`).join(' · ') || undefined}>
-                  <table className="table align-middle">
-                    <thead><tr><th>{multiDay ? 'Date' : 'Time'}</th><th>Category</th><th>Description</th><th className="text-end">Amount</th></tr></thead>
-                    <tbody>
-                      {expenses.length === 0 ? (
-                        <tr><td colSpan={4} className="text-center text-secondary py-3">No expenses in this period.</td></tr>
-                      ) : expenses.map((e) => (
-                        <tr key={e.id}>
-                          <td className="text-nowrap text-secondary">{when(e)}</td>
-                          <td><span className="badge text-bg-light">{e.category}</span></td>
-                          <td>{e.description}</td>
-                          <td className="text-end fw-semibold">{e.amount.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </Section>
-
-                <Section title={`Refunds (${refunds.length})`} hint="Partial returns — the items went back into stock.">
-                  <table className="table align-middle">
-                    <thead><tr><th>{multiDay ? 'Date' : 'Time'}</th><th>Receipt #</th><th className="col-hide-sm">Reason</th><th className="text-end">Amount</th></tr></thead>
-                    <tbody>
-                      {refunds.length === 0 ? (
-                        <tr><td colSpan={4} className="text-center text-secondary py-3">No refunds in this period.</td></tr>
-                      ) : refunds.map((r) => (
-                        <tr key={r.id}>
-                          <td className="text-nowrap text-secondary">{when(r)}</td>
-                          <td className="font-monospace small">{r.transactionNo}</td>
-                          <td className="col-hide-sm">{r.reason}</td>
-                          <td className="text-end fw-semibold">{r.amount.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </Section>
-              </>
-            )}
-
-            <div className="row g-4">
-              <div className="col-md-6">
-                <Section title={`Low stock (${stock.lowStock.length})`}>
-                  <table className="table align-middle">
-                    <tbody>
-                      {stock.lowStock.length === 0 ? (
-                        <tr><td className="text-center text-secondary py-3">Nothing low on stock.</td></tr>
-                      ) : stock.lowStock.map((p) => (
-                        <tr key={p.id}><td className="fw-semibold">{p.name}</td><td className="text-end"><span className="badge text-bg-warning">{p.currentStock} {p.unit}</span></td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </Section>
-              </div>
-              <div className="col-md-6">
-                <Section title={`Out of stock (${stock.outOfStock.length})`}>
-                  <table className="table align-middle">
-                    <tbody>
-                      {stock.outOfStock.length === 0 ? (
-                        <tr><td className="text-center text-secondary py-3">Nothing out of stock.</td></tr>
-                      ) : stock.outOfStock.map((p) => (
-                        <tr key={p.id}><td className="fw-semibold">{p.name}</td><td className="text-end"><span className="badge text-bg-danger">Out</span></td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </Section>
-              </div>
             </div>
 
+            <div className="report-strip">
+              <div><span>Cash collected</span> <strong>{money(paid('cash'))}</strong></div>
+              <div><span>GCash collected</span> <strong>{money(paid('gcash'))}</strong></div>
+              <div><span>Total collected</span> <strong>{money(collected)}</strong></div>
+              {isOwnerOrAdmin && (
+                <>
+                  <div><span>Refunds</span> <strong>{money(refundTotal)}</strong></div>
+                  <div><span>Expenses</span> <strong>{money(expenseSummary.total)}</strong></div>
+                  <div><span>Net cash</span> <strong>{money(netCash)}</strong></div>
+                  <div className="highlight"><span>Net after expenses</span> <strong>{money(netAfter)}</strong></div>
+                </>
+              )}
+            </div>
             {isOwnerOrAdmin && (
-              <p className="text-secondary small mb-0">
-                Inventory valuation: {money(stock.retailValue)} at selling price · {money(stock.costValue)} at cost.
+              <p className="report-footnote">
+                Net cash = cash collected − refunds − expenses (what should be in the drawer). Net after expenses = total collected − refunds − expenses. Voided sales are not counted.
               </p>
             )}
           </div>
-        </div>
+
+          {/* ---- Extra breakdowns (screen only, tucked away) ---- */}
+          <details className="card mt-3 d-print-none">
+            <summary className="card-body fw-semibold" style={{ cursor: 'pointer' }}>
+              <i className="bi bi-list-ul me-2"></i>More details — best sellers, cashiers{isOwnerOrAdmin ? ', expenses, refunds' : ''}, stock
+            </summary>
+            <div className="card-body pt-0">
+              <Details title="Best-selling products">
+                <table className="table align-middle">
+                  <thead><tr><th>Product</th><th className="text-end">Qty sold</th><th className="text-end">Revenue</th></tr></thead>
+                  <tbody>
+                    {summary.bestSellers.length === 0 ? (
+                      <tr><td colSpan={3} className="text-center text-secondary py-3">No sales in this period.</td></tr>
+                    ) : summary.bestSellers.map((b) => (
+                      <tr key={b.productName}><td className="fw-semibold">{b.productName}</td><td className="text-end">{b.qty}</td><td className="text-end">{money(b.revenue)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Details>
+
+              <Details title="Sales by cashier">
+                <table className="table align-middle">
+                  <thead><tr><th>Cashier</th><th className="text-end">Transactions</th><th className="text-end">Paid</th></tr></thead>
+                  <tbody>
+                    {cashierRows.length === 0 ? (
+                      <tr><td colSpan={3} className="text-center text-secondary py-3">No sales in this period.</td></tr>
+                    ) : cashierRows.map((c) => (
+                      <tr key={c.cashierId}><td className="fw-semibold">{usersById[c.cashierId] || '—'}</td><td className="text-end">{c.count}</td><td className="text-end">{money(c.net)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Details>
+
+              {isOwnerOrAdmin && (
+                <>
+                  <Details title={`Expenses (${expenses.length})`} hint={expenseSummary.byCategory.map((c) => `${c.category} ${money(c.amount)}`).join(' · ') || undefined}>
+                    <table className="table align-middle">
+                      <thead><tr><th>{multiDay ? 'Date' : 'Time'}</th><th>Category</th><th>Description</th><th className="text-end">Amount</th></tr></thead>
+                      <tbody>
+                        {expenses.length === 0 ? (
+                          <tr><td colSpan={4} className="text-center text-secondary py-3">No expenses in this period.</td></tr>
+                        ) : expenses.map((e) => (
+                          <tr key={e.id}><td className="text-nowrap text-secondary">{when(e)}</td><td>{e.category}</td><td>{e.description}</td><td className="text-end fw-semibold">{money(e.amount)}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </Details>
+
+                  <Details title={`Refunds (${refunds.length})`}>
+                    <table className="table align-middle">
+                      <thead><tr><th>{multiDay ? 'Date' : 'Time'}</th><th>Receipt #</th><th>Reason</th><th className="text-end">Amount</th></tr></thead>
+                      <tbody>
+                        {refunds.length === 0 ? (
+                          <tr><td colSpan={4} className="text-center text-secondary py-3">No refunds in this period.</td></tr>
+                        ) : refunds.map((r) => (
+                          <tr key={r.id}><td className="text-nowrap text-secondary">{when(r)}</td><td className="font-monospace small">{r.transactionNo}</td><td>{r.reason}</td><td className="text-end fw-semibold">{money(r.amount)}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </Details>
+                </>
+              )}
+
+              <Details title={`Low stock (${stock.lowStock.length}) & out of stock (${stock.outOfStock.length})`}>
+                <table className="table align-middle">
+                  <tbody>
+                    {stock.lowStock.length + stock.outOfStock.length === 0 ? (
+                      <tr><td className="text-center text-secondary py-3">Everything is well stocked.</td></tr>
+                    ) : (
+                      <>
+                        {stock.outOfStock.map((p) => (
+                          <tr key={p.id}><td className="fw-semibold">{p.name}</td><td className="text-end"><span className="badge text-bg-danger">Out</span></td></tr>
+                        ))}
+                        {stock.lowStock.map((p) => (
+                          <tr key={p.id}><td className="fw-semibold">{p.name}</td><td className="text-end"><span className="badge text-bg-warning">{p.currentStock} {p.unit}</span></td></tr>
+                        ))}
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </Details>
+
+              {isOwnerOrAdmin && (
+                <p className="text-secondary small mb-0">
+                  Inventory valuation: {money(stock.retailValue)} at selling price · {money(stock.costValue)} at cost.
+                </p>
+              )}
+            </div>
+          </details>
+        </>
       )}
     </Layout>
   );
