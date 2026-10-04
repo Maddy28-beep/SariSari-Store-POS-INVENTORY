@@ -1,18 +1,19 @@
 import { collection, getDocs, addDoc, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { getDocsSafe } from '../firebase/offline';
 
 export async function getCategories() {
-  const snap = await getDocs(query(collection(db, 'categories'), where('isActive', '==', true), orderBy('name')));
+  const snap = await getDocsSafe(query(collection(db, 'categories'), where('isActive', '==', true), orderBy('name')));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 export async function getUnits() {
-  const snap = await getDocs(query(collection(db, 'units'), orderBy('name')));
+  const snap = await getDocsSafe(query(collection(db, 'units'), orderBy('name')));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 export async function getSuppliers() {
-  const snap = await getDocs(query(collection(db, 'suppliers'), where('isActive', '==', true), orderBy('name')));
+  const snap = await getDocsSafe(query(collection(db, 'suppliers'), where('isActive', '==', true), orderBy('name')));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 

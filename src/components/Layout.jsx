@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
+import { useSyncStatus } from '../firebase/offline';
 
 function SidebarLink({ to, icon, badge, children }) {
   return (
@@ -21,6 +22,7 @@ export default function Layout({ children, header }) {
   const [pendingVoidCount, setPendingVoidCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const { online, pending } = useSyncStatus();
 
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
@@ -35,6 +37,14 @@ export default function Layout({ children, header }) {
 
   return (
     <div className="d-flex app-shell" style={{ minHeight: '100vh' }}>
+      {(!online || pending > 0) && (
+        <div className={`sync-banner d-print-none ${online ? 'syncing' : 'offline'}`} role="status">
+          <i className={`bi ${online ? 'bi-arrow-repeat' : 'bi-wifi-off'}`}></i>{' '}
+          {online
+            ? `Syncing ${pending} change${pending === 1 ? '' : 's'} to the server…`
+            : `No internet — keep selling. Everything is saved on this device and will sync automatically.${pending ? ` (${pending} waiting)` : ''}`}
+        </div>
+      )}
       <header className="app-topbar d-lg-none d-print-none">
         <button type="button" className="btn btn-link text-white p-0 fs-3 lh-1" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
           <i className="bi bi-list"></i>

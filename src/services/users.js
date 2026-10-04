@@ -1,12 +1,13 @@
-import { collection, doc, getDocs, setDoc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, query, orderBy } from 'firebase/firestore';
 import {
   createUserWithEmailAndPassword, getAuth, sendPasswordResetEmail,
 } from 'firebase/auth';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { auth, db, app as mainApp } from '../firebase/config';
+import { getDocsSafe } from '../firebase/offline';
 
 export async function getAllUsers() {
-  const snap = await getDocs(query(collection(db, 'users'), orderBy('name')));
+  const snap = await getDocsSafe(query(collection(db, 'users'), orderBy('name')));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
